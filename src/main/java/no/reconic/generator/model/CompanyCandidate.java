@@ -1,5 +1,7 @@
 package no.reconic.generator.model;
 
+import no.reconic.generator.domain.DomainCandidate;
+
 public record CompanyCandidate(
         String organizationNumber,
         String name,
@@ -14,7 +16,8 @@ public record CompanyCandidate(
         String email,
         String phone,
         EntityType entityType,
-        String parentOrganizationNumber
+        String parentOrganizationNumber,
+        DomainCandidate domainCandidate
 ) {
     public String websiteUrl() {
         if (website == null || website.isBlank()) {

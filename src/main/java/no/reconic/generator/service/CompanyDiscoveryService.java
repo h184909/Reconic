@@ -4,6 +4,10 @@ import no.reconic.generator.brreg.BrregClient;
 import no.reconic.generator.brreg.dto.BrregAddressDto;
 import no.reconic.generator.brreg.dto.BrregCompanyDto;
 import no.reconic.generator.brreg.dto.BrregIndustryCodeDto;
+import no.reconic.generator.domain.DomainCandidate;
+import no.reconic.generator.domain.DomainConfidence;
+import no.reconic.generator.domain.DomainDiscoveryService;
+import no.reconic.generator.domain.DomainSource;
 import no.reconic.generator.model.CompanyCandidate;
 import no.reconic.generator.model.CompanyDiscoveryResult;
 import no.reconic.generator.model.EntityType;
@@ -32,9 +36,14 @@ public class CompanyDiscoveryService {
     private static final Logger log = LoggerFactory.getLogger(CompanyDiscoveryService.class);
 
     private final BrregClient brregClient;
+    private final DomainDiscoveryService domainDiscoveryService;
 
-    public CompanyDiscoveryService(BrregClient brregClient) {
+    public CompanyDiscoveryService(
+            BrregClient brregClient,
+            DomainDiscoveryService domainDiscoveryService
+    ) {
         this.brregClient = brregClient;
+        this.domainDiscoveryService = domainDiscoveryService;
     }
 
     public CompanyDiscoveryResult discover(LeadSearchForm form) {
@@ -83,16 +92,53 @@ public class CompanyDiscoveryService {
                         Collectors.counting()
                 ));
 
+        int domainCount = (int) candidates.stream()
+                .map(CompanyCandidate::domainCandidate)
+                .filter(DomainCandidate::hasDomain)
+                .count();
+        int websiteDomainCount = countBySource(candidates, DomainSource.REGISTERED_WEBSITE);
+        int emailDomainCount = countBySource(candidates, DomainSource.REGISTERED_EMAIL);
+        int highConfidenceCount = countByConfidence(candidates, DomainConfidence.HIGH);
+        int mediumConfidenceCount = countByConfidence(candidates, DomainConfidence.MEDIUM);
+
         int fetchedCount = fetchedCompanies.size();
-        log.info("Kandidatsøk ferdig: {} rå treff, {} kandidater", fetchedCount, candidates.size());
+        log.info(
+                "Kandidatsøk ferdig: {} rå treff, {} kandidater, {} domener ({} fra hjemmeside, {} fra e-post)",
+                fetchedCount,
+                candidates.size(),
+                domainCount,
+                websiteDomainCount,
+                emailDomainCount
+        );
+
         return new CompanyDiscoveryResult(
                 Instant.now(),
                 fetchedCount,
                 candidates.size(),
                 fetchedCount - candidates.size(),
                 candidates,
-                segmentCounts
+                segmentCounts,
+                domainCount,
+                candidates.size() - domainCount,
+                websiteDomainCount,
+                emailDomainCount,
+                highConfidenceCount,
+                mediumConfidenceCount
         );
+    }
+
+    private int countBySource(List<CompanyCandidate> candidates, DomainSource source) {
+        return (int) candidates.stream()
+                .map(CompanyCandidate::domainCandidate)
+                .filter(candidate -> candidate.source() == source)
+                .count();
+    }
+
+    private int countByConfidence(List<CompanyCandidate> candidates, DomainConfidence confidence) {
+        return (int) candidates.stream()
+                .map(CompanyCandidate::domainCandidate)
+                .filter(candidate -> candidate.confidence() == confidence)
+                .count();
     }
 
     private Set<Municipality> parseMunicipalities(List<String> municipalityNumbers) {
@@ -138,6 +184,10 @@ public class CompanyDiscoveryService {
     ) {
         BrregAddressDto address = selectAddress(company, entityType);
         BrregIndustryCodeDto industryCode = company.naeringskode1();
+        DomainCandidate domainCandidate = domainDiscoveryService.discover(
+                company.hjemmeside(),
+                company.epostadresse()
+        );
 
         return new CompanyCandidate(
                 company.organisasjonsnummer(),
@@ -153,7 +203,8 @@ public class CompanyDiscoveryService {
                 company.epostadresse(),
                 company.telefon(),
                 entityType,
-                company.overordnetEnhet()
+                company.overordnetEnhet(),
+                domainCandidate
         );
     }
 

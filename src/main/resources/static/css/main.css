@@ -397,3 +397,122 @@ tbody tr:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* Domain discovery 0.2 */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    display: grid;
+    gap: 5px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-soft);
+}
+
+.metric-card span {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.metric-card strong {
+    font-size: 1.9rem;
+    letter-spacing: -0.04em;
+}
+
+.metric-card small {
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+.summary-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.summary-row .segment-summary {
+    margin-bottom: 0;
+}
+
+.confidence-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.confidence-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    margin-top: 7px;
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    background: var(--surface-soft);
+    font-size: 0.72rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.confidence-badge.high {
+    border-color: #8caf9f;
+    color: #164d39;
+    background: #e5f4ed;
+}
+
+.confidence-badge.medium {
+    border-color: #d6b66e;
+    color: #76570e;
+    background: #fff6db;
+}
+
+.confidence-badge.low {
+    border-color: #d89c75;
+    color: #804119;
+    background: #fff0e6;
+}
+
+.confidence-badge.none {
+    color: var(--muted);
+    background: #f1f2f1;
+}
+
+.domain-explanation {
+    max-width: 320px;
+}
+
+.verification-note {
+    color: #76570e;
+}
+
+@media (max-width: 1000px) {
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .summary-row {
+        flex-direction: column;
+    }
+
+    .confidence-summary {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 620px) {
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic – generator baseline</title>
+    <title>Reconic – domenefinning</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
@@ -16,11 +16,11 @@
 
 <main class="shell page">
     <section class="hero">
-        <p class="eyebrow">Baseline 0.1</p>
-        <h1>Finn aktuelle bedrifter</h1>
+        <p class="eyebrow">Domain discovery 0.2</p>
+        <h1>Finn og kvalitetssikre kandidatdomener</h1>
         <p class="intro">
-            Første versjon henter selskaper fra Brønnøysundregistrene og filtrerer dem på geografi,
-            størrelse og bransje. Ingen DNS-analyse, scoring eller antakelser er lagt til ennå.
+            Reconic henter kandidatbedrifter fra Brønnøysundregistrene og finner domene fra registrert
+            hjemmeside eller e-postadresse. Hvert domene får tydelig kilde og konfidens før teknisk analyse bygges på.
         </p>
     </section>
 
@@ -111,14 +111,46 @@
                     <span th:text="${result.filteredOutCount}">0</span> filtrert bort.
                 </p>
             </div>
-            <span class="timestamp"
-                  th:text="${result.generatedAtDisplay()}">01.08.2026</span>
+            <span class="timestamp" th:text="${result.generatedAtDisplay()}">01.08.2026</span>
         </div>
 
-        <div class="segment-summary">
-            <div class="summary-chip" th:each="entry : ${result.segmentCounts.entrySet()}">
-                <span th:text="${entry.key.displayName}">Industri</span>
-                <strong th:text="${entry.value}">0</strong>
+        <div class="metric-grid">
+            <article class="metric-card">
+                <span>Domener funnet</span>
+                <strong th:text="${result.domainCount}">0</strong>
+                <small th:text="${result.domainCoverageDisplay() + ' dekning'}">0 % dekning</small>
+            </article>
+            <article class="metric-card">
+                <span>Fra hjemmeside</span>
+                <strong th:text="${result.websiteDomainCount}">0</strong>
+                <small>Høy konfidens</small>
+            </article>
+            <article class="metric-card">
+                <span>Fra e-post</span>
+                <strong th:text="${result.emailDomainCount}">0</strong>
+                <small>Krever verifisering</small>
+            </article>
+            <article class="metric-card">
+                <span>Uten domene</span>
+                <strong th:text="${result.missingDomainCount}">0</strong>
+                <small>Ikke tolket som teknisk mangel</small>
+            </article>
+        </div>
+
+        <div class="summary-row">
+            <div class="segment-summary">
+                <div class="summary-chip" th:each="entry : ${result.segmentCounts.entrySet()}">
+                    <span th:text="${entry.key.displayName}">Industri</span>
+                    <strong th:text="${entry.value}">0</strong>
+                </div>
+            </div>
+            <div class="confidence-summary">
+                <span class="confidence-badge high">
+                    Høy <strong th:text="${result.highConfidenceCount}">0</strong>
+                </span>
+                <span class="confidence-badge medium">
+                    Middels <strong th:text="${result.mediumConfidenceCount}">0</strong>
+                </span>
             </div>
         </div>
 
@@ -129,9 +161,9 @@
                     <th>Bedrift</th>
                     <th>Ansatte</th>
                     <th>Segment</th>
-                    <th>Næringskode</th>
                     <th>Kommune</th>
-                    <th>Nettside</th>
+                    <th>Domene</th>
+                    <th>Kilde og konfidens</th>
                     <th>Type</th>
                 </tr>
                 </thead>
@@ -140,24 +172,32 @@
                     <td>
                         <strong th:text="${candidate.name}">Firma AS</strong>
                         <small class="table-subtext" th:text="${candidate.organizationNumber}">999999999</small>
+                        <small class="table-subtext" th:text="${candidate.naceDisplay()}">25.000 Industri</small>
                     </td>
                     <td class="number" th:text="${candidate.employees}">50</td>
                     <td th:text="${candidate.segment.displayName}">Industri</td>
-                    <td>
-                        <span th:text="${candidate.naceDisplay()}">25.000 Industri</span>
-                    </td>
                     <td>
                         <span th:text="${candidate.municipalityName ?: 'Ukjent'}">Sandnes</span>
                         <small class="table-subtext" th:if="${candidate.address}"
                                th:text="${candidate.address}">Adresse</small>
                     </td>
                     <td>
-                        <a th:if="${candidate.websiteUrl()}"
-                           th:href="${candidate.websiteUrl()}"
-                           th:text="${candidate.website}"
+                        <a th:if="${candidate.domainCandidate.hasDomain()}"
+                           th:href="${candidate.domainCandidate.url()}"
+                           th:text="${candidate.domainCandidate.domain}"
                            target="_blank"
                            rel="noopener noreferrer">example.no</a>
-                        <span class="muted" th:unless="${candidate.websiteUrl()}">Ikke registrert</span>
+                        <span class="muted" th:unless="${candidate.domainCandidate.hasDomain()}">Ikke funnet</span>
+                        <small class="table-subtext domain-explanation"
+                               th:text="${candidate.domainCandidate.explanation}">Forklaring</small>
+                    </td>
+                    <td>
+                        <span th:text="${candidate.domainCandidate.source.displayName}">Registrert hjemmeside</span>
+                        <span class="confidence-badge"
+                              th:classappend="${candidate.domainCandidate.confidence.cssClass}"
+                              th:text="${candidate.domainCandidate.confidence.displayName}">Høy</span>
+                        <small class="table-subtext verification-note"
+                               th:if="${candidate.domainCandidate.requiresVerification}">Bør verifiseres manuelt</small>
                     </td>
                     <td>
                         <span th:text="${candidate.entityType.displayName}">Hovedenhet</span>
