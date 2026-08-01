@@ -3,22 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic</title>
+    <title>Reconic – generator baseline</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
-<main class="page">
-    <p class="eyebrow">Market intelligence for IT providers</p>
-    <h1>Reconic</h1>
-    <p class="intro">
-        Prosjektet er i valideringsfasen. Første mål er å bygge en forklarbar leadmotor
-        som finner bedriftene en erfaren MSP-selger faktisk ville kontaktet.
-    </p>
+<header class="topbar">
+    <div class="shell topbar-inner">
+        <a class="brand" th:href="@{/}">Reconic</a>
+        <span class="phase">Generator validation</span>
+    </div>
+</header>
+
+<main class="shell page">
+    <section class="hero">
+        <p class="eyebrow">Baseline 0.1</p>
+        <h1>Finn aktuelle bedrifter</h1>
+        <p class="intro">
+            Første versjon henter selskaper fra Brønnøysundregistrene og filtrerer dem på geografi,
+            størrelse og bransje. Ingen DNS-analyse, scoring eller antakelser er lagt til ennå.
+        </p>
+    </section>
 
     <section class="card">
-        <h2>Nåværende fokus</h2>
-        <p>Generator → datakvalitet → manuell validering → produktbeslutning.</p>
-        <p class="muted">Innlogging, betaling og produksjonsdrift kommer først dersom motoren beviser verdi.</p>
+        <div class="section-heading">
+            <div>
+                <p class="section-kicker">Marked</p>
+                <h2>Nytt kandidatsøk</h2>
+            </div>
+            <p class="muted">Datakilde: Enhetsregisterets åpne API</p>
+        </div>
+
+        <form th:action="@{/search}" th:object="${searchForm}" method="post" class="search-form">
+            <div class="form-grid two-columns">
+                <label class="field">
+                    <span>Minimum ansatte</span>
+                    <input type="number" min="5" max="10000" th:field="*{minEmployees}">
+                    <small class="field-error" th:if="${#fields.hasErrors('minEmployees')}"
+                           th:errors="*{minEmployees}"></small>
+                </label>
+
+                <label class="field">
+                    <span>Maksimum ansatte</span>
+                    <input type="number" min="5" max="10000" th:field="*{maxEmployees}">
+                    <small class="field-error" th:if="${#fields.hasErrors('maxEmployees')}"
+                           th:errors="*{maxEmployees}"></small>
+                </label>
+            </div>
+
+            <small class="field-error block-error" th:if="${#fields.hasErrors('employeeRangeValid')}"
+                   th:errors="*{employeeRangeValid}"></small>
+
+            <fieldset>
+                <legend>Kommuner</legend>
+                <div class="option-grid municipality-grid">
+                    <label class="check-option" th:each="municipality : ${municipalities}">
+                        <input type="checkbox"
+                               th:field="*{municipalityNumbers}"
+                               th:value="${municipality.number}">
+                        <span>
+                            <strong th:text="${municipality.displayName}">Sandnes</strong>
+                            <small th:text="${municipality.number}">1108</small>
+                        </span>
+                    </label>
+                </div>
+                <small class="field-error" th:if="${#fields.hasErrors('municipalityNumbers')}"
+                       th:errors="*{municipalityNumbers}"></small>
+            </fieldset>
+
+            <fieldset>
+                <legend>Bransjesegmenter</legend>
+                <div class="option-grid segment-grid">
+                    <label class="check-option" th:each="segment : ${segments}">
+                        <input type="checkbox"
+                               th:field="*{segmentNames}"
+                               th:value="${segment.name()}">
+                        <span>
+                            <strong th:text="${segment.displayName}">Bygg/anlegg</strong>
+                            <small th:text="${#strings.listJoin(segment.nacePrefixes, ', ')}">41, 42, 43</small>
+                        </span>
+                    </label>
+                </div>
+                <small class="field-error" th:if="${#fields.hasErrors('segmentNames')}"
+                       th:errors="*{segmentNames}"></small>
+            </fieldset>
+
+            <label class="toggle-option">
+                <input type="checkbox" th:field="*{includeSubunits}">
+                <span>
+                    <strong>Ta med underenheter</strong>
+                    <small>Kan finne lokale avdelinger, men kan også gi flere konsernrelaterte treff.</small>
+                </span>
+            </label>
+
+            <button type="submit" class="primary-button">Hent kandidater</button>
+        </form>
+
+        <div class="alert error" th:if="${searchError}" th:text="${searchError}"></div>
+    </section>
+
+    <section class="results" th:if="${result}">
+        <div class="results-header">
+            <div>
+                <p class="section-kicker">Resultat</p>
+                <h2 th:text="${result.candidateCount + ' kandidater'}">0 kandidater</h2>
+                <p class="muted">
+                    <span th:text="${result.fetchedCount}">0</span> rå treff hentet,
+                    <span th:text="${result.filteredOutCount}">0</span> filtrert bort.
+                </p>
+            </div>
+            <span class="timestamp"
+                  th:text="${result.generatedAtDisplay()}">01.08.2026</span>
+        </div>
+
+        <div class="segment-summary">
+            <div class="summary-chip" th:each="entry : ${result.segmentCounts.entrySet()}">
+                <span th:text="${entry.key.displayName}">Industri</span>
+                <strong th:text="${entry.value}">0</strong>
+            </div>
+        </div>
+
+        <div class="table-wrap" th:if="${!result.candidates.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Bedrift</th>
+                    <th>Ansatte</th>
+                    <th>Segment</th>
+                    <th>Næringskode</th>
+                    <th>Kommune</th>
+                    <th>Nettside</th>
+                    <th>Type</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="candidate : ${result.candidates}">
+                    <td>
+                        <strong th:text="${candidate.name}">Firma AS</strong>
+                        <small class="table-subtext" th:text="${candidate.organizationNumber}">999999999</small>
+                    </td>
+                    <td class="number" th:text="${candidate.employees}">50</td>
+                    <td th:text="${candidate.segment.displayName}">Industri</td>
+                    <td>
+                        <span th:text="${candidate.naceDisplay()}">25.000 Industri</span>
+                    </td>
+                    <td>
+                        <span th:text="${candidate.municipalityName ?: 'Ukjent'}">Sandnes</span>
+                        <small class="table-subtext" th:if="${candidate.address}"
+                               th:text="${candidate.address}">Adresse</small>
+                    </td>
+                    <td>
+                        <a th:if="${candidate.websiteUrl()}"
+                           th:href="${candidate.websiteUrl()}"
+                           th:text="${candidate.website}"
+                           target="_blank"
+                           rel="noopener noreferrer">example.no</a>
+                        <span class="muted" th:unless="${candidate.websiteUrl()}">Ikke registrert</span>
+                    </td>
+                    <td>
+                        <span th:text="${candidate.entityType.displayName}">Hovedenhet</span>
+                        <small class="table-subtext" th:if="${candidate.parentOrganizationNumber}"
+                               th:text="${'Overordnet: ' + candidate.parentOrganizationNumber}"></small>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty-state" th:if="${result.candidates.isEmpty()}">
+            Ingen bedrifter passet filtrene. Prøv et bredere ansattintervall eller flere segmenter.
+        </div>
     </section>
 </main>
 </body>
