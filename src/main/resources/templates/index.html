@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic – DNS-berikelse</title>
+    <title>Reconic – tekniske signaler</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
@@ -16,12 +16,12 @@
 
 <main class="shell page">
     <section class="hero">
-        <p class="eyebrow">DNS enrichment 0.3</p>
-        <h1>Observer bedriftenes tekniske signaler</h1>
+        <p class="eyebrow">Technology intelligence 0.4</p>
+        <h1>Gjør rå DNS-data forståelig</h1>
         <p class="intro">
-            Reconic finner kandidatbedrifter og domener, og gjør deretter faktabaserte DNS-oppslag for MX,
-            SPF, DMARC og navneservere. Manglende poster vises som observasjoner, ikke som automatiske
-            sikkerhets- eller salgskonklusjoner.
+            Reconic oversetter MX, SPF, DMARC og navneservere til forklarbare signaler om e-postplattform,
+            gateway og mulige infrastrukturleverandører. Signalene er observasjoner med bevis og konfidens,
+            ikke bastante påstander om hvem som drifter hele IT-miljøet.
         </p>
     </section>
 
@@ -98,7 +98,7 @@
 
             <div class="submit-row">
                 <button type="submit" class="primary-button">Hent og analyser kandidater</button>
-                <small class="muted">DNS-oppslagene kan gjøre søket litt tregere enn i versjon 0.2.</small>
+                <small class="muted">Søket gjør domene-, DNS- og signalanalyse i samme kjøring.</small>
             </div>
         </form>
 
@@ -118,64 +118,56 @@
             <span class="timestamp" th:text="${result.generatedAtDisplay()}">01.08.2026</span>
         </div>
 
-        <div class="metric-grid">
+        <div class="metric-grid intelligence-metric-grid">
             <article class="metric-card">
-                <span>Domener funnet</span>
-                <strong th:text="${result.domainCount}">0</strong>
-                <small th:text="${result.domainCoverageDisplay() + ' dekning'}">0 % dekning</small>
+                <span>Microsoft 365</span>
+                <strong th:text="${result.microsoft365Count}">0</strong>
+                <small>Direkte MX eller støtte fra SPF</small>
             </article>
             <article class="metric-card">
-                <span>Fra hjemmeside</span>
-                <strong th:text="${result.websiteDomainCount}">0</strong>
-                <small>Høy konfidens</small>
+                <span>Google Workspace</span>
+                <strong th:text="${result.googleWorkspaceCount}">0</strong>
+                <small>Direkte MX eller støtte fra SPF</small>
             </article>
             <article class="metric-card">
-                <span>Fra e-post</span>
-                <strong th:text="${result.emailDomainCount}">0</strong>
-                <small>Krever verifisering</small>
+                <span>Separat e-postgateway</span>
+                <strong th:text="${result.gatewayCount}">0</strong>
+                <small>Mimecast, Proofpoint, Cisco, Telenor eller Altibox</small>
             </article>
             <article class="metric-card">
-                <span>DNS feilet</span>
-                <strong th:text="${result.dnsFailureCount}">0</strong>
-                <small>Teknisk oppslagsfeil, ikke fravær av poster</small>
+                <span>Leverandørsignal</span>
+                <strong th:text="${result.providerSignalCount}">0</strong>
+                <small>Minst ett gjenkjent spor i MX, SPF eller NS</small>
             </article>
         </div>
 
-        <div class="metric-grid dns-metric-grid">
+        <div class="metric-grid dmarc-metric-grid">
             <article class="metric-card compact">
-                <span>DNS analysert</span>
-                <strong th:text="${result.dnsAttemptedCount}">0</strong>
-                <small>
-                    <span th:text="${result.dnsSuccessCount}">0</span> fullført,
-                    <span th:text="${result.dnsPartialCount}">0</span> delvis
-                </small>
+                <span>DMARC håndheves</span>
+                <strong th:text="${result.dmarcEnforcedCount}">0</strong>
+                <small>Quarantine eller reject</small>
             </article>
             <article class="metric-card compact">
-                <span>MX funnet</span>
-                <strong th:text="${result.mxCount}">0</strong>
-                <small>Observerte e-postrutere</small>
+                <span>DMARC overvåking</span>
+                <strong th:text="${result.dmarcMonitoringCount}">0</strong>
+                <small>Policy p=none</small>
             </article>
             <article class="metric-card compact">
-                <span>SPF funnet</span>
-                <strong th:text="${result.spfCount}">0</strong>
-                <small>TXT-poster som starter med v=spf1</small>
+                <span>DMARC mangler</span>
+                <strong th:text="${result.dmarcMissingCount}">0</strong>
+                <small>Ingen offentlig DMARC-post observert</small>
             </article>
             <article class="metric-card compact">
-                <span>DMARC funnet</span>
-                <strong th:text="${result.dmarcCount}">0</strong>
-                <small>Observerte _dmarc TXT-poster</small>
-            </article>
-            <article class="metric-card compact">
-                <span>NS funnet</span>
-                <strong th:text="${result.nameServerCount}">0</strong>
-                <small>Observerte navneservere</small>
+                <span>Domener funnet</span>
+                <strong th:text="${result.domainCount}">0</strong>
+                <small th:text="${result.domainCoverageDisplay() + ' dekning'}">0 % dekning</small>
             </article>
         </div>
 
         <div class="export-panel">
             <div>
                 <strong>Eksporter resultatet</strong>
-                <small>CSV-filene bruker semikolon og UTF-8, og inneholder tomme kolonner for manuell fasit.</small>
+                <small>CSV inneholder både rå DNS-poster, tolkede signaler, bevis og tomme fasitkolonner.</small>
             </div>
             <div class="export-actions">
                 <a class="secondary-button" th:href="@{/export/all.csv}">Eksporter alle</a>
@@ -192,29 +184,26 @@
             </div>
             <div class="confidence-summary">
                 <span class="confidence-badge high">
-                    Høy <strong th:text="${result.highConfidenceCount}">0</strong>
+                    Høy domene-konfidens <strong th:text="${result.highConfidenceCount}">0</strong>
                 </span>
                 <span class="confidence-badge medium">
-                    Middels <strong th:text="${result.mediumConfidenceCount}">0</strong>
+                    Middels domene-konfidens <strong th:text="${result.mediumConfidenceCount}">0</strong>
                 </span>
             </div>
         </div>
 
         <div class="table-wrap" th:if="${!result.candidates.isEmpty()}">
-            <table>
+            <table class="intelligence-table">
                 <thead>
                 <tr>
                     <th>Bedrift</th>
                     <th>Ansatte</th>
-                    <th>Segment</th>
-                    <th>Kommune</th>
                     <th>Domene</th>
-                    <th>Kilde</th>
-                    <th>MX</th>
-                    <th>SPF / DMARC</th>
-                    <th>Navneservere</th>
-                    <th>DNS-status</th>
-                    <th>Type</th>
+                    <th>E-post</th>
+                    <th>DMARC</th>
+                    <th>SPF</th>
+                    <th>Leverandørsignal</th>
+                    <th>Detaljer</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -222,15 +211,12 @@
                     <td>
                         <strong th:text="${candidate.name}">Firma AS</strong>
                         <small class="table-subtext" th:text="${candidate.organizationNumber}">999999999</small>
-                        <small class="table-subtext" th:text="${candidate.naceDisplay()}">25.000 Industri</small>
+                        <small class="table-subtext"
+                               th:text="${candidate.segment.displayName + ' · ' + (candidate.municipalityName ?: 'Ukjent kommune')}">
+                            Industri · Sandnes
+                        </small>
                     </td>
                     <td class="number" th:text="${candidate.employees}">50</td>
-                    <td th:text="${candidate.segment.displayName}">Industri</td>
-                    <td>
-                        <span th:text="${candidate.municipalityName ?: 'Ukjent'}">Sandnes</span>
-                        <small class="table-subtext" th:if="${candidate.address}"
-                               th:text="${candidate.address}">Adresse</small>
-                    </td>
                     <td>
                         <a th:if="${candidate.domainCandidate.hasDomain()}"
                            th:href="${candidate.domainCandidate.url()}"
@@ -238,55 +224,87 @@
                            target="_blank"
                            rel="noopener noreferrer">example.no</a>
                         <span class="muted" th:unless="${candidate.domainCandidate.hasDomain()}">Ikke funnet</span>
-                        <small class="table-subtext domain-explanation"
-                               th:text="${candidate.domainCandidate.explanation}">Forklaring</small>
-                    </td>
-                    <td>
-                        <span th:text="${candidate.domainCandidate.source.displayName}">Registrert hjemmeside</span>
                         <span class="confidence-badge"
                               th:classappend="${candidate.domainCandidate.confidence.cssClass}"
                               th:text="${candidate.domainCandidate.confidence.displayName}">Høy</span>
-                        <small class="table-subtext verification-note"
-                               th:if="${candidate.domainCandidate.requiresVerification}">Bør verifiseres manuelt</small>
-                    </td>
-                    <td class="dns-cell">
-                        <span th:if="${candidate.dnsObservation.hasMx()}" class="signal-present">Funnet</span>
-                        <span th:unless="${candidate.dnsObservation.hasMx()}" class="muted">Ikke funnet</span>
-                        <small class="table-subtext" th:each="mx : ${candidate.dnsObservation.mxRecords}"
-                               th:text="${mx}">10 mail.example.no</small>
-                    </td>
-                    <td class="dns-cell">
-                        <div class="signal-line">
-                            <span>SPF</span>
-                            <strong th:text="${candidate.dnsObservation.hasSpf() ? 'Funnet' : 'Ikke funnet'}">Funnet</strong>
-                        </div>
-                        <small class="table-subtext" th:if="${candidate.dnsObservation.hasSpf()}"
-                               th:text="${candidate.dnsObservation.spfDisplay()}">v=spf1 ...</small>
-                        <div class="signal-line">
-                            <span>DMARC</span>
-                            <strong th:text="${candidate.dnsObservation.dmarcDisplay()}">none</strong>
-                        </div>
-                        <small class="table-subtext" th:if="${candidate.dnsObservation.hasDmarc()}"
-                               th:text="${candidate.dnsObservation.dmarcRecord}">v=DMARC1; p=none</small>
-                    </td>
-                    <td class="dns-cell">
-                        <span th:if="${candidate.dnsObservation.hasNameServers()}" class="signal-present">Funnet</span>
-                        <span th:unless="${candidate.dnsObservation.hasNameServers()}" class="muted">Ikke funnet</span>
-                        <small class="table-subtext" th:each="ns : ${candidate.dnsObservation.nameServers}"
-                               th:text="${ns}">ns1.example.no</small>
                     </td>
                     <td>
-                        <span class="status-badge"
-                              th:classappend="${candidate.dnsObservation.status.cssClass}"
-                              th:text="${candidate.dnsObservation.status.displayName}">Fullført</span>
-                        <small class="table-subtext error-text"
-                               th:if="${candidate.dnsObservation.hasErrors()}"
-                               th:text="${candidate.dnsObservation.errorsDisplay()}">Feilmelding</small>
+                        <span class="signal-badge"
+                              th:classappend="${candidate.technologyObservation.emailPlatform.cssClass}"
+                              th:text="${candidate.technologyObservation.emailPlatform.displayName}">Microsoft 365</span>
+                        <small class="table-subtext"
+                               th:text="${'Konfidens: ' + candidate.technologyObservation.emailPlatformConfidence.displayName}">
+                            Konfidens: Høy
+                        </small>
+                        <small class="table-subtext gateway-note"
+                               th:if="${candidate.technologyObservation.hasGateway()}"
+                               th:text="${'Gateway: ' + candidate.technologyObservation.emailGateway.displayName}">
+                            Gateway: Proofpoint
+                        </small>
                     </td>
                     <td>
-                        <span th:text="${candidate.entityType.displayName}">Hovedenhet</span>
-                        <small class="table-subtext" th:if="${candidate.parentOrganizationNumber}"
-                               th:text="${'Overordnet: ' + candidate.parentOrganizationNumber}"></small>
+                        <span class="signal-badge"
+                              th:classappend="${candidate.technologyObservation.dmarcPosture.cssClass}"
+                              th:text="${candidate.technologyObservation.dmarcPosture.displayName}">Reject</span>
+                        <small class="table-subtext">Offentlig DMARC-policy</small>
+                    </td>
+                    <td>
+                        <span class="signal-badge"
+                              th:classappend="${candidate.technologyObservation.spfPosture.cssClass}"
+                              th:text="${candidate.technologyObservation.spfPosture.displayName}">Hardfail (-all)</span>
+                        <small class="table-subtext"
+                               th:if="${!candidate.technologyObservation.spfSignals.isEmpty()}"
+                               th:text="${candidate.technologyObservation.spfSignalsDisplay()}">Microsoft 365</small>
+                    </td>
+                    <td th:with="provider=${candidate.technologyObservation.primaryProviderSignal()}">
+                        <div th:if="${provider != null}">
+                            <strong th:text="${provider.provider}">Hjelseth</strong>
+                            <span class="confidence-badge"
+                                  th:classappend="${provider.confidence.cssClass}"
+                                  th:text="${provider.confidence.displayName}">Høy</span>
+                            <small class="table-subtext" th:text="${'Bevis: ' + provider.sourcesDisplay()}">Bevis: NS + SPF</small>
+                        </div>
+                        <span class="muted" th:if="${provider == null}">Ingen kjent signatur</span>
+                    </td>
+                    <td>
+                        <details class="raw-details">
+                            <summary>Vis rådata</summary>
+                            <div class="detail-grid">
+                                <div>
+                                    <strong>Domenegrunnlag</strong>
+                                    <span th:text="${candidate.domainCandidate.explanation}">Forklaring</span>
+                                </div>
+                                <div>
+                                    <strong>MX</strong>
+                                    <span th:text="${candidate.dnsObservation.mxDisplay()}">MX</span>
+                                </div>
+                                <div>
+                                    <strong>SPF</strong>
+                                    <span th:text="${candidate.dnsObservation.spfDisplay()}">SPF</span>
+                                </div>
+                                <div>
+                                    <strong>DMARC</strong>
+                                    <span th:text="${candidate.dnsObservation.dmarcRecord ?: 'Ikke funnet'}">DMARC</span>
+                                </div>
+                                <div>
+                                    <strong>Navneservere</strong>
+                                    <span th:text="${candidate.dnsObservation.nameServersDisplay()}">NS</span>
+                                </div>
+                                <div th:if="${candidate.technologyObservation.hasProviderSignals()}">
+                                    <strong>Leverandørbevis</strong>
+                                    <span th:each="provider : ${candidate.technologyObservation.providerSignals}">
+                                        <b th:text="${provider.provider + ': '}">Hjelseth:</b>
+                                        <span th:text="${provider.evidenceDisplay()}">NS: ns1...</span>
+                                    </span>
+                                </div>
+                                <div>
+                                    <strong>DNS-status</strong>
+                                    <span th:text="${candidate.dnsObservation.status.displayName}">Fullført</span>
+                                    <span class="error-text" th:if="${candidate.dnsObservation.hasErrors()}"
+                                          th:text="${candidate.dnsObservation.errorsDisplay()}">Feil</span>
+                                </div>
+                            </div>
+                        </details>
                     </td>
                 </tr>
                 </tbody>

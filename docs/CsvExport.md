@@ -42,3 +42,7 @@ Disse fylles manuelt før presisjon beregnes.
 ## Begrensning
 
 Det siste resultatet lagres bare i den lokale HTTP-sessionen. Etter omstart av applikasjonen eller utløpt session må et nytt søk kjøres før eksport.
+
+## Teknologisignaler i 0.4
+
+Eksporten inneholder nå også tolkede felter for e-postplattform, gateway, DMARC, SPF og leverandørsignaturer. Rå DNS-poster beholdes ved siden av de tolkede feltene, slik at signalene kan etterprøves.

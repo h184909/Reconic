@@ -2,6 +2,8 @@ package no.reconic.generator.export;
 
 import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
+import no.reconic.generator.intelligence.ProviderSignal;
+import no.reconic.generator.intelligence.TechnologyObservation;
 import no.reconic.generator.model.CompanyCandidate;
 import no.reconic.generator.model.CompanyDiscoveryResult;
 import org.springframework.stereotype.Service;
@@ -62,6 +64,17 @@ public class CsvExportService {
                 "dmarcPolicy",
                 "nameServers",
                 "dnsErrors",
+                "emailPlatform",
+                "emailPlatformConfidence",
+                "emailGateway",
+                "emailGatewayConfidence",
+                "dmarcPosture",
+                "spfPosture",
+                "spfAllMechanism",
+                "spfSignals",
+                "providerSignals",
+                "providerEvidence",
+                "technologyEvidence",
                 "manualDomain",
                 "isCorrect",
                 "comment"
@@ -70,6 +83,7 @@ public class CsvExportService {
         for (CompanyCandidate candidate : candidates) {
             DomainCandidate domain = candidate.domainCandidate();
             DnsObservation dns = candidate.dnsObservation();
+            TechnologyObservation technology = candidate.technologyObservation();
 
             appendRow(csv, List.of(
                     value(candidate.organizationNumber()),
@@ -98,6 +112,17 @@ public class CsvExportService {
                     dns == null ? "" : value(dns.dmarcPolicy()),
                     dns == null ? "" : String.join(" | ", dns.nameServers()),
                     dns == null ? "" : String.join(" | ", dns.lookupErrors()),
+                    technology == null ? "" : technology.emailPlatform().getDisplayName(),
+                    technology == null ? "" : technology.emailPlatformConfidence().getDisplayName(),
+                    technology == null ? "" : technology.emailGateway().getDisplayName(),
+                    technology == null ? "" : technology.emailGatewayConfidence().getDisplayName(),
+                    technology == null ? "" : technology.dmarcPosture().getDisplayName(),
+                    technology == null ? "" : technology.spfPosture().getDisplayName(),
+                    technology == null ? "" : value(technology.spfAllMechanism()),
+                    technology == null ? "" : technology.spfSignalsDisplay(),
+                    technology == null ? "" : providerSummary(technology.providerSignals()),
+                    technology == null ? "" : technology.providerEvidenceDisplay(),
+                    technology == null ? "" : technology.evidenceDisplay(),
                     "",
                     "",
                     ""
@@ -109,6 +134,17 @@ public class CsvExportService {
         System.arraycopy(UTF8_BOM, 0, result, 0, UTF8_BOM.length);
         System.arraycopy(content, 0, result, UTF8_BOM.length, content.length);
         return result;
+    }
+
+    private String providerSummary(List<ProviderSignal> signals) {
+        if (signals == null || signals.isEmpty()) {
+            return "";
+        }
+        return String.join(" | ", signals.stream()
+                .map(signal -> signal.provider()
+                        + " [" + signal.sourcesDisplay() + "; "
+                        + signal.confidence().getDisplayName() + "]")
+                .toList());
     }
 
     private void appendRow(StringBuilder csv, List<String> values) {

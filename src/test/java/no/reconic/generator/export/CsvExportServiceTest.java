@@ -35,6 +35,9 @@ class CsvExportServiceTest {
         assertEquals((byte) 0xBF, bytes[2]);
         assertTrue(csv.contains("generatedDomain;domainSource;domainConfidence"));
         assertTrue(csv.contains("mxRecords;spfRecords;dmarcRecord;dmarcPolicy;nameServers;dnsErrors"));
+        assertTrue(csv.contains("emailPlatform;emailPlatformConfidence;emailGateway;emailGatewayConfidence"));
+        assertTrue(csv.contains("dmarcPosture;spfPosture;spfAllMechanism;spfSignals"));
+        assertTrue(csv.contains("providerSignals;providerEvidence;technologyEvidence"));
         assertTrue(csv.contains("manualDomain;isCorrect;comment"));
         assertTrue(csv.contains("example.no"));
         assertTrue(csv.contains("10 mail.example.no"));

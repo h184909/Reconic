@@ -2,6 +2,7 @@ package no.reconic.generator.model;
 
 import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
+import no.reconic.generator.intelligence.TechnologyObservation;
 
 public record CompanyCandidate(
         String organizationNumber,
@@ -19,8 +20,54 @@ public record CompanyCandidate(
         EntityType entityType,
         String parentOrganizationNumber,
         DomainCandidate domainCandidate,
-        DnsObservation dnsObservation
+        DnsObservation dnsObservation,
+        TechnologyObservation technologyObservation
 ) {
+    public CompanyCandidate(
+            String organizationNumber,
+            String name,
+            int employees,
+            IndustrySegment segment,
+            String naceCode,
+            String naceDescription,
+            String municipalityNumber,
+            String municipalityName,
+            String address,
+            String website,
+            String email,
+            String phone,
+            EntityType entityType,
+            String parentOrganizationNumber,
+            DomainCandidate domainCandidate,
+            DnsObservation dnsObservation
+    ) {
+        this(
+                organizationNumber,
+                name,
+                employees,
+                segment,
+                naceCode,
+                naceDescription,
+                municipalityNumber,
+                municipalityName,
+                address,
+                website,
+                email,
+                phone,
+                entityType,
+                parentOrganizationNumber,
+                domainCandidate,
+                dnsObservation,
+                TechnologyObservation.empty()
+        );
+    }
+
+    public CompanyCandidate {
+        technologyObservation = technologyObservation == null
+                ? TechnologyObservation.empty()
+                : technologyObservation;
+    }
+
     public String websiteUrl() {
         if (website == null || website.isBlank()) {
             return null;
@@ -60,6 +107,29 @@ public record CompanyCandidate(
                 entityType,
                 parentOrganizationNumber,
                 domainCandidate,
+                observation,
+                TechnologyObservation.empty()
+        );
+    }
+
+    public CompanyCandidate withTechnologyObservation(TechnologyObservation observation) {
+        return new CompanyCandidate(
+                organizationNumber,
+                name,
+                employees,
+                segment,
+                naceCode,
+                naceDescription,
+                municipalityNumber,
+                municipalityName,
+                address,
+                website,
+                email,
+                phone,
+                entityType,
+                parentOrganizationNumber,
+                domainCandidate,
+                dnsObservation,
                 observation
         );
     }

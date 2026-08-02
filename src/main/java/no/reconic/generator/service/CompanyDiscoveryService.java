@@ -16,6 +16,11 @@ import no.reconic.generator.model.CompanyDiscoveryResult;
 import no.reconic.generator.model.EntityType;
 import no.reconic.generator.model.IndustrySegment;
 import no.reconic.generator.model.Municipality;
+import no.reconic.generator.intelligence.DmarcPosture;
+import no.reconic.generator.intelligence.EmailGateway;
+import no.reconic.generator.intelligence.EmailPlatform;
+import no.reconic.generator.intelligence.TechnologyAnalysisService;
+import no.reconic.generator.intelligence.TechnologyObservation;
 import no.reconic.generator.web.LeadSearchForm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,15 +46,18 @@ public class CompanyDiscoveryService {
     private final BrregClient brregClient;
     private final DomainDiscoveryService domainDiscoveryService;
     private final DnsEnrichmentService dnsEnrichmentService;
+    private final TechnologyAnalysisService technologyAnalysisService;
 
     public CompanyDiscoveryService(
             BrregClient brregClient,
             DomainDiscoveryService domainDiscoveryService,
-            DnsEnrichmentService dnsEnrichmentService
+            DnsEnrichmentService dnsEnrichmentService,
+            TechnologyAnalysisService technologyAnalysisService
     ) {
         this.brregClient = brregClient;
         this.domainDiscoveryService = domainDiscoveryService;
         this.dnsEnrichmentService = dnsEnrichmentService;
+        this.technologyAnalysisService = technologyAnalysisService;
     }
 
     public CompanyDiscoveryResult discover(LeadSearchForm form) {
@@ -91,7 +99,8 @@ public class CompanyDiscoveryService {
                         .thenComparing(CompanyCandidate::name, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .toList();
 
-        List<CompanyCandidate> candidates = dnsEnrichmentService.enrich(sortedCandidates);
+        List<CompanyCandidate> dnsCandidates = dnsEnrichmentService.enrich(sortedCandidates);
+        List<CompanyCandidate> candidates = technologyAnalysisService.enrich(dnsCandidates);
 
         Map<IndustrySegment, Long> segmentCounts = candidates.stream()
                 .collect(Collectors.groupingBy(
@@ -120,6 +129,20 @@ public class CompanyDiscoveryService {
         int spfCount = countDnsPresence(candidates, DnsObservation::hasSpf);
         int dmarcCount = countDnsPresence(candidates, DnsObservation::hasDmarc);
         int nameServerCount = countDnsPresence(candidates, DnsObservation::hasNameServers);
+
+        int microsoft365Count = countTechnology(candidates, observation ->
+                observation.emailPlatform() == EmailPlatform.MICROSOFT_365);
+        int googleWorkspaceCount = countTechnology(candidates, observation ->
+                observation.emailPlatform() == EmailPlatform.GOOGLE_WORKSPACE);
+        int gatewayCount = countTechnology(candidates, observation ->
+                observation.emailGateway() != EmailGateway.NONE);
+        int dmarcEnforcedCount = countTechnology(candidates, observation ->
+                observation.dmarcPosture().isEnforced());
+        int dmarcMonitoringCount = countTechnology(candidates, observation ->
+                observation.dmarcPosture() == DmarcPosture.MONITORING);
+        int dmarcMissingCount = countTechnology(candidates, observation ->
+                observation.dmarcPosture() == DmarcPosture.MISSING);
+        int providerSignalCount = countTechnology(candidates, TechnologyObservation::hasProviderSignals);
 
         int fetchedCount = fetchedCompanies.size();
         log.info(
@@ -152,7 +175,14 @@ public class CompanyDiscoveryService {
                 mxCount,
                 spfCount,
                 dmarcCount,
-                nameServerCount
+                nameServerCount,
+                microsoft365Count,
+                googleWorkspaceCount,
+                gatewayCount,
+                dmarcEnforcedCount,
+                dmarcMonitoringCount,
+                dmarcMissingCount,
+                providerSignalCount
         );
     }
 
@@ -186,6 +216,18 @@ public class CompanyDiscoveryService {
     ) {
         return (int) candidates.stream()
                 .map(CompanyCandidate::dnsObservation)
+                .filter(Objects::nonNull)
+                .filter(predicate)
+                .count();
+    }
+
+
+    private int countTechnology(
+            List<CompanyCandidate> candidates,
+            java.util.function.Predicate<TechnologyObservation> predicate
+    ) {
+        return (int) candidates.stream()
+                .map(CompanyCandidate::technologyObservation)
                 .filter(Objects::nonNull)
                 .filter(predicate)
                 .count();

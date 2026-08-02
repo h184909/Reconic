@@ -27,10 +27,70 @@ public record CompanyDiscoveryResult(
         int mxCount,
         int spfCount,
         int dmarcCount,
-        int nameServerCount
+        int nameServerCount,
+        int microsoft365Count,
+        int googleWorkspaceCount,
+        int gatewayCount,
+        int dmarcEnforcedCount,
+        int dmarcMonitoringCount,
+        int dmarcMissingCount,
+        int providerSignalCount
 ) {
     private static final DateTimeFormatter DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
+    public CompanyDiscoveryResult(
+            Instant generatedAt,
+            int fetchedCount,
+            int candidateCount,
+            int filteredOutCount,
+            List<CompanyCandidate> candidates,
+            Map<IndustrySegment, Long> segmentCounts,
+            int domainCount,
+            int missingDomainCount,
+            int websiteDomainCount,
+            int emailDomainCount,
+            int highConfidenceCount,
+            int mediumConfidenceCount,
+            int dnsAttemptedCount,
+            int dnsSuccessCount,
+            int dnsPartialCount,
+            int dnsFailureCount,
+            int mxCount,
+            int spfCount,
+            int dmarcCount,
+            int nameServerCount
+    ) {
+        this(
+                generatedAt,
+                fetchedCount,
+                candidateCount,
+                filteredOutCount,
+                candidates,
+                segmentCounts,
+                domainCount,
+                missingDomainCount,
+                websiteDomainCount,
+                emailDomainCount,
+                highConfidenceCount,
+                mediumConfidenceCount,
+                dnsAttemptedCount,
+                dnsSuccessCount,
+                dnsPartialCount,
+                dnsFailureCount,
+                mxCount,
+                spfCount,
+                dmarcCount,
+                nameServerCount,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+        );
+    }
 
     public CompanyDiscoveryResult {
         candidates = List.copyOf(candidates);

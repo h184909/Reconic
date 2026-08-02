@@ -676,3 +676,144 @@ tbody tr:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* Technology intelligence 0.4 */
+.intelligence-metric-grid,
+.dmarc-metric-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.intelligence-table {
+    min-width: 1280px;
+}
+
+.intelligence-table th:nth-child(1) {
+    width: 22%;
+}
+
+.intelligence-table th:nth-child(8) {
+    width: 13%;
+}
+
+.signal-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-soft);
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.signal-badge.microsoft,
+.signal-badge.google,
+.signal-badge.enforced,
+.signal-badge.strong,
+.signal-badge.present {
+    border-color: #8caf9f;
+    background: #e5f4ed;
+    color: #164d39;
+}
+
+.signal-badge.gateway,
+.signal-badge.monitoring {
+    border-color: #d6b66e;
+    background: #fff6db;
+    color: #76570e;
+}
+
+.signal-badge.missing,
+.signal-badge.none,
+.signal-badge.unknown,
+.signal-badge.other {
+    background: #f1f2f1;
+    color: var(--muted);
+}
+
+.signal-badge.warning,
+.signal-badge.danger {
+    border-color: #e2a77e;
+    background: #fff0e6;
+    color: #804119;
+}
+
+.gateway-note {
+    color: #76570e;
+    font-weight: 650;
+}
+
+.raw-details {
+    min-width: 125px;
+}
+
+.raw-details summary {
+    width: fit-content;
+    padding: 7px 10px;
+    border: 1px solid #aebbb4;
+    border-radius: 8px;
+    color: var(--accent);
+    background: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.raw-details[open] {
+    min-width: 460px;
+}
+
+.raw-details[open] summary {
+    margin-bottom: 12px;
+}
+
+.detail-grid {
+    display: grid;
+    gap: 11px;
+    max-width: 520px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fafbf9;
+}
+
+.detail-grid > div {
+    display: grid;
+    gap: 4px;
+}
+
+.detail-grid strong {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #536058;
+}
+
+.detail-grid span {
+    overflow-wrap: anywhere;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.detail-grid b {
+    color: var(--text);
+}
+
+@media (max-width: 1100px) {
+    .intelligence-metric-grid,
+    .dmarc-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .intelligence-metric-grid,
+    .dmarc-metric-grid {
+        grid-template-columns: 1fr;
+    }
+}
