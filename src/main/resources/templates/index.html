@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic – domenefinning</title>
+    <title>Reconic – DNS-berikelse</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
@@ -16,11 +16,12 @@
 
 <main class="shell page">
     <section class="hero">
-        <p class="eyebrow">Domain discovery 0.2</p>
-        <h1>Finn og kvalitetssikre kandidatdomener</h1>
+        <p class="eyebrow">DNS enrichment 0.3</p>
+        <h1>Observer bedriftenes tekniske signaler</h1>
         <p class="intro">
-            Reconic henter kandidatbedrifter fra Brønnøysundregistrene og finner domene fra registrert
-            hjemmeside eller e-postadresse. Hvert domene får tydelig kilde og konfidens før teknisk analyse bygges på.
+            Reconic finner kandidatbedrifter og domener, og gjør deretter faktabaserte DNS-oppslag for MX,
+            SPF, DMARC og navneservere. Manglende poster vises som observasjoner, ikke som automatiske
+            sikkerhets- eller salgskonklusjoner.
         </p>
     </section>
 
@@ -30,7 +31,7 @@
                 <p class="section-kicker">Marked</p>
                 <h2>Nytt kandidatsøk</h2>
             </div>
-            <p class="muted">Datakilde: Enhetsregisterets åpne API</p>
+            <p class="muted">Datakilder: Enhetsregisteret og offentlig DNS</p>
         </div>
 
         <form th:action="@{/search}" th:object="${searchForm}" method="post" class="search-form">
@@ -95,7 +96,10 @@
                 </span>
             </label>
 
-            <button type="submit" class="primary-button">Hent kandidater</button>
+            <div class="submit-row">
+                <button type="submit" class="primary-button">Hent og analyser kandidater</button>
+                <small class="muted">DNS-oppslagene kan gjøre søket litt tregere enn i versjon 0.2.</small>
+            </div>
         </form>
 
         <div class="alert error" th:if="${searchError}" th:text="${searchError}"></div>
@@ -131,10 +135,52 @@
                 <small>Krever verifisering</small>
             </article>
             <article class="metric-card">
-                <span>Uten domene</span>
-                <strong th:text="${result.missingDomainCount}">0</strong>
-                <small>Ikke tolket som teknisk mangel</small>
+                <span>DNS feilet</span>
+                <strong th:text="${result.dnsFailureCount}">0</strong>
+                <small>Teknisk oppslagsfeil, ikke fravær av poster</small>
             </article>
+        </div>
+
+        <div class="metric-grid dns-metric-grid">
+            <article class="metric-card compact">
+                <span>DNS analysert</span>
+                <strong th:text="${result.dnsAttemptedCount}">0</strong>
+                <small>
+                    <span th:text="${result.dnsSuccessCount}">0</span> fullført,
+                    <span th:text="${result.dnsPartialCount}">0</span> delvis
+                </small>
+            </article>
+            <article class="metric-card compact">
+                <span>MX funnet</span>
+                <strong th:text="${result.mxCount}">0</strong>
+                <small>Observerte e-postrutere</small>
+            </article>
+            <article class="metric-card compact">
+                <span>SPF funnet</span>
+                <strong th:text="${result.spfCount}">0</strong>
+                <small>TXT-poster som starter med v=spf1</small>
+            </article>
+            <article class="metric-card compact">
+                <span>DMARC funnet</span>
+                <strong th:text="${result.dmarcCount}">0</strong>
+                <small>Observerte _dmarc TXT-poster</small>
+            </article>
+            <article class="metric-card compact">
+                <span>NS funnet</span>
+                <strong th:text="${result.nameServerCount}">0</strong>
+                <small>Observerte navneservere</small>
+            </article>
+        </div>
+
+        <div class="export-panel">
+            <div>
+                <strong>Eksporter resultatet</strong>
+                <small>CSV-filene bruker semikolon og UTF-8, og inneholder tomme kolonner for manuell fasit.</small>
+            </div>
+            <div class="export-actions">
+                <a class="secondary-button" th:href="@{/export/all.csv}">Eksporter alle</a>
+                <a class="primary-button link-button" th:href="@{/export/validation.csv}">Tilfeldig valideringsutvalg (50)</a>
+            </div>
         </div>
 
         <div class="summary-row">
@@ -163,7 +209,11 @@
                     <th>Segment</th>
                     <th>Kommune</th>
                     <th>Domene</th>
-                    <th>Kilde og konfidens</th>
+                    <th>Kilde</th>
+                    <th>MX</th>
+                    <th>SPF / DMARC</th>
+                    <th>Navneservere</th>
+                    <th>DNS-status</th>
                     <th>Type</th>
                 </tr>
                 </thead>
@@ -198,6 +248,40 @@
                               th:text="${candidate.domainCandidate.confidence.displayName}">Høy</span>
                         <small class="table-subtext verification-note"
                                th:if="${candidate.domainCandidate.requiresVerification}">Bør verifiseres manuelt</small>
+                    </td>
+                    <td class="dns-cell">
+                        <span th:if="${candidate.dnsObservation.hasMx()}" class="signal-present">Funnet</span>
+                        <span th:unless="${candidate.dnsObservation.hasMx()}" class="muted">Ikke funnet</span>
+                        <small class="table-subtext" th:each="mx : ${candidate.dnsObservation.mxRecords}"
+                               th:text="${mx}">10 mail.example.no</small>
+                    </td>
+                    <td class="dns-cell">
+                        <div class="signal-line">
+                            <span>SPF</span>
+                            <strong th:text="${candidate.dnsObservation.hasSpf() ? 'Funnet' : 'Ikke funnet'}">Funnet</strong>
+                        </div>
+                        <small class="table-subtext" th:if="${candidate.dnsObservation.hasSpf()}"
+                               th:text="${candidate.dnsObservation.spfDisplay()}">v=spf1 ...</small>
+                        <div class="signal-line">
+                            <span>DMARC</span>
+                            <strong th:text="${candidate.dnsObservation.dmarcDisplay()}">none</strong>
+                        </div>
+                        <small class="table-subtext" th:if="${candidate.dnsObservation.hasDmarc()}"
+                               th:text="${candidate.dnsObservation.dmarcRecord}">v=DMARC1; p=none</small>
+                    </td>
+                    <td class="dns-cell">
+                        <span th:if="${candidate.dnsObservation.hasNameServers()}" class="signal-present">Funnet</span>
+                        <span th:unless="${candidate.dnsObservation.hasNameServers()}" class="muted">Ikke funnet</span>
+                        <small class="table-subtext" th:each="ns : ${candidate.dnsObservation.nameServers}"
+                               th:text="${ns}">ns1.example.no</small>
+                    </td>
+                    <td>
+                        <span class="status-badge"
+                              th:classappend="${candidate.dnsObservation.status.cssClass}"
+                              th:text="${candidate.dnsObservation.status.displayName}">Fullført</span>
+                        <small class="table-subtext error-text"
+                               th:if="${candidate.dnsObservation.hasErrors()}"
+                               th:text="${candidate.dnsObservation.errorsDisplay()}">Feilmelding</small>
                     </td>
                     <td>
                         <span th:text="${candidate.entityType.displayName}">Hovedenhet</span>

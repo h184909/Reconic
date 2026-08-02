@@ -1,5 +1,6 @@
 package no.reconic.generator.model;
 
+import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
 
 public record CompanyCandidate(
@@ -17,7 +18,8 @@ public record CompanyCandidate(
         String phone,
         EntityType entityType,
         String parentOrganizationNumber,
-        DomainCandidate domainCandidate
+        DomainCandidate domainCandidate,
+        DnsObservation dnsObservation
 ) {
     public String websiteUrl() {
         if (website == null || website.isBlank()) {
@@ -39,5 +41,26 @@ public record CompanyCandidate(
             return naceCode;
         }
         return naceCode + " " + naceDescription;
+    }
+
+    public CompanyCandidate withDnsObservation(DnsObservation observation) {
+        return new CompanyCandidate(
+                organizationNumber,
+                name,
+                employees,
+                segment,
+                naceCode,
+                naceDescription,
+                municipalityNumber,
+                municipalityName,
+                address,
+                website,
+                email,
+                phone,
+                entityType,
+                parentOrganizationNumber,
+                domainCandidate,
+                observation
+        );
     }
 }

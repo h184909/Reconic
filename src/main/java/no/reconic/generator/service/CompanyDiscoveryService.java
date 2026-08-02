@@ -4,6 +4,9 @@ import no.reconic.generator.brreg.BrregClient;
 import no.reconic.generator.brreg.dto.BrregAddressDto;
 import no.reconic.generator.brreg.dto.BrregCompanyDto;
 import no.reconic.generator.brreg.dto.BrregIndustryCodeDto;
+import no.reconic.generator.dns.DnsEnrichmentService;
+import no.reconic.generator.dns.DnsLookupStatus;
+import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
 import no.reconic.generator.domain.DomainConfidence;
 import no.reconic.generator.domain.DomainDiscoveryService;
@@ -37,13 +40,16 @@ public class CompanyDiscoveryService {
 
     private final BrregClient brregClient;
     private final DomainDiscoveryService domainDiscoveryService;
+    private final DnsEnrichmentService dnsEnrichmentService;
 
     public CompanyDiscoveryService(
             BrregClient brregClient,
-            DomainDiscoveryService domainDiscoveryService
+            DomainDiscoveryService domainDiscoveryService,
+            DnsEnrichmentService dnsEnrichmentService
     ) {
         this.brregClient = brregClient;
         this.domainDiscoveryService = domainDiscoveryService;
+        this.dnsEnrichmentService = dnsEnrichmentService;
     }
 
     public CompanyDiscoveryResult discover(LeadSearchForm form) {
@@ -79,11 +85,13 @@ public class CompanyDiscoveryService {
             }
         }
 
-        List<CompanyCandidate> candidates = uniqueCandidates.values().stream()
+        List<CompanyCandidate> sortedCandidates = uniqueCandidates.values().stream()
                 .sorted(Comparator.comparingInt(CompanyCandidate::employees)
                         .reversed()
                         .thenComparing(CompanyCandidate::name, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .toList();
+
+        List<CompanyCandidate> candidates = dnsEnrichmentService.enrich(sortedCandidates);
 
         Map<IndustrySegment, Long> segmentCounts = candidates.stream()
                 .collect(Collectors.groupingBy(
@@ -94,6 +102,7 @@ public class CompanyDiscoveryService {
 
         int domainCount = (int) candidates.stream()
                 .map(CompanyCandidate::domainCandidate)
+                .filter(Objects::nonNull)
                 .filter(DomainCandidate::hasDomain)
                 .count();
         int websiteDomainCount = countBySource(candidates, DomainSource.REGISTERED_WEBSITE);
@@ -101,14 +110,26 @@ public class CompanyDiscoveryService {
         int highConfidenceCount = countByConfidence(candidates, DomainConfidence.HIGH);
         int mediumConfidenceCount = countByConfidence(candidates, DomainConfidence.MEDIUM);
 
+        int dnsAttemptedCount = countDnsStatus(candidates, DnsLookupStatus.SUCCESS)
+                + countDnsStatus(candidates, DnsLookupStatus.PARTIAL)
+                + countDnsStatus(candidates, DnsLookupStatus.FAILED);
+        int dnsSuccessCount = countDnsStatus(candidates, DnsLookupStatus.SUCCESS);
+        int dnsPartialCount = countDnsStatus(candidates, DnsLookupStatus.PARTIAL);
+        int dnsFailureCount = countDnsStatus(candidates, DnsLookupStatus.FAILED);
+        int mxCount = countDnsPresence(candidates, DnsObservation::hasMx);
+        int spfCount = countDnsPresence(candidates, DnsObservation::hasSpf);
+        int dmarcCount = countDnsPresence(candidates, DnsObservation::hasDmarc);
+        int nameServerCount = countDnsPresence(candidates, DnsObservation::hasNameServers);
+
         int fetchedCount = fetchedCompanies.size();
         log.info(
-                "Kandidatsøk ferdig: {} rå treff, {} kandidater, {} domener ({} fra hjemmeside, {} fra e-post)",
+                "Kandidatsøk ferdig: {} rå treff, {} kandidater, {} domener, DNS: {} ok / {} delvis / {} feilet",
                 fetchedCount,
                 candidates.size(),
                 domainCount,
-                websiteDomainCount,
-                emailDomainCount
+                dnsSuccessCount,
+                dnsPartialCount,
+                dnsFailureCount
         );
 
         return new CompanyDiscoveryResult(
@@ -123,13 +144,22 @@ public class CompanyDiscoveryService {
                 websiteDomainCount,
                 emailDomainCount,
                 highConfidenceCount,
-                mediumConfidenceCount
+                mediumConfidenceCount,
+                dnsAttemptedCount,
+                dnsSuccessCount,
+                dnsPartialCount,
+                dnsFailureCount,
+                mxCount,
+                spfCount,
+                dmarcCount,
+                nameServerCount
         );
     }
 
     private int countBySource(List<CompanyCandidate> candidates, DomainSource source) {
         return (int) candidates.stream()
                 .map(CompanyCandidate::domainCandidate)
+                .filter(Objects::nonNull)
                 .filter(candidate -> candidate.source() == source)
                 .count();
     }
@@ -137,7 +167,27 @@ public class CompanyDiscoveryService {
     private int countByConfidence(List<CompanyCandidate> candidates, DomainConfidence confidence) {
         return (int) candidates.stream()
                 .map(CompanyCandidate::domainCandidate)
+                .filter(Objects::nonNull)
                 .filter(candidate -> candidate.confidence() == confidence)
+                .count();
+    }
+
+    private int countDnsStatus(List<CompanyCandidate> candidates, DnsLookupStatus status) {
+        return (int) candidates.stream()
+                .map(CompanyCandidate::dnsObservation)
+                .filter(Objects::nonNull)
+                .filter(observation -> observation.status() == status)
+                .count();
+    }
+
+    private int countDnsPresence(
+            List<CompanyCandidate> candidates,
+            java.util.function.Predicate<DnsObservation> predicate
+    ) {
+        return (int) candidates.stream()
+                .map(CompanyCandidate::dnsObservation)
+                .filter(Objects::nonNull)
+                .filter(predicate)
                 .count();
     }
 
@@ -204,7 +254,8 @@ public class CompanyDiscoveryService {
                 company.telefon(),
                 entityType,
                 company.overordnetEnhet(),
-                domainCandidate
+                domainCandidate,
+                DnsObservation.skipped(domainCandidate.domain())
         );
     }
 

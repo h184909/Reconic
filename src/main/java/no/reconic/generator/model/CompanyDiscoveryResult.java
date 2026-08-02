@@ -19,7 +19,15 @@ public record CompanyDiscoveryResult(
         int websiteDomainCount,
         int emailDomainCount,
         int highConfidenceCount,
-        int mediumConfidenceCount
+        int mediumConfidenceCount,
+        int dnsAttemptedCount,
+        int dnsSuccessCount,
+        int dnsPartialCount,
+        int dnsFailureCount,
+        int mxCount,
+        int spfCount,
+        int dmarcCount,
+        int nameServerCount
 ) {
     private static final DateTimeFormatter DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
