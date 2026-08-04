@@ -79,3 +79,12 @@ Hver kandidat lagrer:
 ## Viktig begrensning
 
 Vektene er en første testbar hypotese. De skal ikke brukes som endelig kommersiell modell før resultatene er blindtestet av personer som faktisk selger IT-tjenester og sammenlignet med reelle salgsutfall.
+
+## Kalibrering i 0.5.1
+
+- E-postbaserte, ubekreftede domener kan ikke få endelig høyere prioritet enn `Middels`.
+- Opportunity-scoren beholdes, slik at signalstyrken fortsatt kan sammenlignes.
+- Manglende SPF og DMARC gir bare svak uttelling når domenet ikke har MX.
+- Fravær av leverandørsignatur gir maksimalt 10 poeng, og bare infrastrukturspor gir 8 poeng.
+- Delte domener merkes som mulig konsern-/fellesmiljø og vises som usikkerhet.
+- Manuelt bekreftede domener fra `domain-overrides.csv` analyseres på nytt og behandles som høy konfidens.

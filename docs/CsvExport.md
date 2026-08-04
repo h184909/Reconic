@@ -41,3 +41,20 @@ Begge eksportene inneholder virksomhetsdata, domene, rå DNS, tolkede teknologis
 ## Begrensning
 
 Det siste søkeresultatet ligger bare i HTTP-sessionen. Et nytt søk må kjøres etter omstart eller utløpt session.
+
+## Nye felt i 0.5.1
+
+Systemfelt:
+
+- `priorityCapped`
+- `priorityExplanation`
+- `sharedDomain`
+- `sharedDomainCount`
+
+Salgsvalidering:
+
+- `wouldContact`
+- `priorityCorrect`
+- `reasonsUseful`
+- `manualPriority`
+- `salesComment`

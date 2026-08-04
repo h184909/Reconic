@@ -40,8 +40,10 @@ class CsvExportServiceTest {
         assertTrue(csv.contains("providerSignals;providerRoles;providerEvidence;technologyEvidence"));
         assertTrue(csv.contains("opportunityScore;opportunityPriority;marketFitScore"));
         assertTrue(csv.contains("technicalOpportunityScore;providerLandscapeScore;dataConfidenceScore"));
+        assertTrue(csv.contains("priorityCapped;priorityExplanation;sharedDomain;sharedDomainCount"));
         assertTrue(csv.contains("manualEmailPlatform;emailPlatformCorrect;manualProviderRelationship"));
         assertTrue(csv.contains("providerSignalCorrect;technologyComment;manualDomain;isCorrect;comment"));
+        assertTrue(csv.contains("wouldContact;priorityCorrect;reasonsUseful;manualPriority;salesComment"));
         assertTrue(csv.contains("example.no"));
         assertTrue(csv.contains("10 mail.example.no"));
         assertTrue(csv.contains("quarantine"));

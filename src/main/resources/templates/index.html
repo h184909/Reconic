@@ -226,6 +226,8 @@
                         <span class="priority-badge"
                               th:classappend="${candidate.opportunityAssessment.priority.cssClass}"
                               th:text="${candidate.opportunityAssessment.priority.displayName}">Høy</span>
+                        <span class="calibration-badge"
+                              th:if="${candidate.opportunityAssessment.priorityCapped}">Krever domenebekreftelse</span>
                         <small class="data-confidence"
                                th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">
                             Datatillit 82/100
@@ -241,6 +243,13 @@
                         <span class="confidence-badge"
                               th:classappend="${candidate.domainCandidate.confidence.cssClass}"
                               th:text="${candidate.domainCandidate.confidence.displayName}">Høy</span>
+                        <span class="override-badge"
+                              th:if="${candidate.domainCandidate.source.name() == 'MANUAL_OVERRIDE'}">Manuell fasit</span>
+                        <span class="shared-domain-badge"
+                              th:if="${candidate.opportunityAssessment.sharedDomain}"
+                              th:text="${'Delt av ' + candidate.opportunityAssessment.sharedDomainCount + ' kandidater'}">
+                            Delt domene
+                        </span>
                         <small class="table-subtext"
                                th:text="${candidate.technologyObservation.emailPlatform.displayName}">Microsoft 365</small>
                         <small class="table-subtext gateway-note"
@@ -289,6 +298,14 @@
                                     <strong>Scorefordeling</strong>
                                     <span th:text="${candidate.opportunityAssessment.scoreBreakdownDisplay()}">Fordeling</span>
                                     <span th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">Datatillit</span>
+                                    <span class="calibration-note"
+                                          th:if="${candidate.opportunityAssessment.priorityCapped}"
+                                          th:text="${candidate.opportunityAssessment.priorityExplanation}">Prioriteten er kalibrert.</span>
+                                    <span class="calibration-note"
+                                          th:if="${candidate.opportunityAssessment.sharedDomain}"
+                                          th:text="${'Domenet deles av ' + candidate.opportunityAssessment.sharedDomainCount + ' kandidater i dette søket.'}">
+                                        Delt domene
+                                    </span>
                                 </div>
                                 <div>
                                     <strong>Alle grunner</strong>

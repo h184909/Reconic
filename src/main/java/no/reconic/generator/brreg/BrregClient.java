@@ -34,7 +34,7 @@ public class BrregClient {
         this.restClient = RestClient.builder()
                 .baseUrl(BASE_URL)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.USER_AGENT, "Reconic/0.5 development")
+                .defaultHeader(HttpHeaders.USER_AGENT, "Reconic/0.5.1 development")
                 .build();
     }
 

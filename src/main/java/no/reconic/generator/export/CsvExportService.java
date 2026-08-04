@@ -84,6 +84,10 @@ public class CsvExportService {
                 "technicalOpportunityScore",
                 "providerLandscapeScore",
                 "dataConfidenceScore",
+                "priorityCapped",
+                "priorityExplanation",
+                "sharedDomain",
+                "sharedDomainCount",
                 "reasonsToContact",
                 "uncertaintyWarnings",
                 "scoreEvidence",
@@ -94,7 +98,12 @@ public class CsvExportService {
                 "technologyComment",
                 "manualDomain",
                 "isCorrect",
-                "comment"
+                "comment",
+                "wouldContact",
+                "priorityCorrect",
+                "reasonsUseful",
+                "manualPriority",
+                "salesComment"
         ));
 
         for (CompanyCandidate candidate : candidates) {
@@ -149,9 +158,18 @@ public class CsvExportService {
                     opportunity == null ? "" : Integer.toString(opportunity.technicalOpportunityScore()),
                     opportunity == null ? "" : Integer.toString(opportunity.providerLandscapeScore()),
                     opportunity == null ? "" : Integer.toString(opportunity.dataConfidenceScore()),
+                    opportunity != null && opportunity.priorityCapped() ? "true" : "false",
+                    opportunity == null ? "" : value(opportunity.priorityExplanation()),
+                    opportunity != null && opportunity.isSharedDomain() ? "true" : "false",
+                    opportunity == null ? "" : Integer.toString(opportunity.sharedDomainCount()),
                     opportunity == null ? "" : opportunity.reasonsDisplay(),
                     opportunity == null ? "" : opportunity.warningsDisplay(),
                     opportunity == null ? "" : opportunity.evidenceDisplay(),
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
                     "",
                     "",
                     "",

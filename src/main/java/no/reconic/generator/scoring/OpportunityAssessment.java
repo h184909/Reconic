@@ -5,6 +5,9 @@ import java.util.List;
 public record OpportunityAssessment(
         int opportunityScore,
         OpportunityPriority priority,
+        boolean priorityCapped,
+        String priorityExplanation,
+        int sharedDomainCount,
         int marketFitScore,
         int technicalOpportunityScore,
         int providerLandscapeScore,
@@ -13,9 +16,38 @@ public record OpportunityAssessment(
         List<String> uncertaintyWarnings,
         List<String> evidence
 ) {
+    public OpportunityAssessment(
+            int opportunityScore,
+            OpportunityPriority priority,
+            int marketFitScore,
+            int technicalOpportunityScore,
+            int providerLandscapeScore,
+            int dataConfidenceScore,
+            List<String> reasonsToContact,
+            List<String> uncertaintyWarnings,
+            List<String> evidence
+    ) {
+        this(
+                opportunityScore,
+                priority,
+                false,
+                null,
+                1,
+                marketFitScore,
+                technicalOpportunityScore,
+                providerLandscapeScore,
+                dataConfidenceScore,
+                reasonsToContact,
+                uncertaintyWarnings,
+                evidence
+        );
+    }
+
     public OpportunityAssessment {
         opportunityScore = clamp(opportunityScore);
         priority = priority == null ? OpportunityPriority.fromScore(opportunityScore) : priority;
+        priorityExplanation = normalize(priorityExplanation);
+        sharedDomainCount = Math.max(0, sharedDomainCount);
         marketFitScore = clampRange(marketFitScore, 0, 35);
         technicalOpportunityScore = clampRange(technicalOpportunityScore, 0, 45);
         providerLandscapeScore = clampRange(providerLandscapeScore, 0, 20);
@@ -29,6 +61,9 @@ public record OpportunityAssessment(
         return new OpportunityAssessment(
                 0,
                 OpportunityPriority.LOW,
+                false,
+                null,
+                0,
                 0,
                 0,
                 0,
@@ -41,6 +76,10 @@ public record OpportunityAssessment(
 
     public boolean hasWarnings() {
         return !uncertaintyWarnings.isEmpty();
+    }
+
+    public boolean isSharedDomain() {
+        return sharedDomainCount > 1;
     }
 
     public String reasonsDisplay() {
@@ -63,6 +102,14 @@ public record OpportunityAssessment(
 
     private static List<String> copy(List<String> values) {
         return values == null ? List.of() : List.copyOf(values);
+    }
+
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static int clamp(int value) {

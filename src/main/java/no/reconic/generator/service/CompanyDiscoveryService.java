@@ -10,6 +10,7 @@ import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
 import no.reconic.generator.domain.DomainConfidence;
 import no.reconic.generator.domain.DomainDiscoveryService;
+import no.reconic.generator.domain.DomainOverrideService;
 import no.reconic.generator.domain.DomainSource;
 import no.reconic.generator.model.CompanyCandidate;
 import no.reconic.generator.model.CompanyDiscoveryResult;
@@ -46,6 +47,7 @@ public class CompanyDiscoveryService {
 
     private final BrregClient brregClient;
     private final DomainDiscoveryService domainDiscoveryService;
+    private final DomainOverrideService domainOverrideService;
     private final DnsEnrichmentService dnsEnrichmentService;
     private final TechnologyAnalysisService technologyAnalysisService;
     private final OpportunityScoringService opportunityScoringService;
@@ -53,12 +55,14 @@ public class CompanyDiscoveryService {
     public CompanyDiscoveryService(
             BrregClient brregClient,
             DomainDiscoveryService domainDiscoveryService,
+            DomainOverrideService domainOverrideService,
             DnsEnrichmentService dnsEnrichmentService,
             TechnologyAnalysisService technologyAnalysisService,
             OpportunityScoringService opportunityScoringService
     ) {
         this.brregClient = brregClient;
         this.domainDiscoveryService = domainDiscoveryService;
+        this.domainOverrideService = domainOverrideService;
         this.dnsEnrichmentService = dnsEnrichmentService;
         this.technologyAnalysisService = technologyAnalysisService;
         this.opportunityScoringService = opportunityScoringService;
@@ -103,13 +107,15 @@ public class CompanyDiscoveryService {
                         .thenComparing(CompanyCandidate::name, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .toList();
 
-        List<CompanyCandidate> dnsCandidates = dnsEnrichmentService.enrich(sortedCandidates);
+        List<CompanyCandidate> correctedDomainCandidates = domainOverrideService.apply(sortedCandidates);
+        List<CompanyCandidate> dnsCandidates = dnsEnrichmentService.enrich(correctedDomainCandidates);
         List<CompanyCandidate> technologyCandidates = technologyAnalysisService.enrich(dnsCandidates);
         List<CompanyCandidate> candidates = opportunityScoringService.enrich(technologyCandidates).stream()
                 .sorted(Comparator
                         .comparingInt((CompanyCandidate candidate) ->
-                                candidate.opportunityAssessment().opportunityScore())
-                        .reversed()
+                                candidate.opportunityAssessment().priority().ordinal())
+                        .thenComparing(Comparator.comparingInt((CompanyCandidate candidate) ->
+                                candidate.opportunityAssessment().opportunityScore()).reversed())
                         .thenComparing(Comparator.comparingInt((CompanyCandidate candidate) ->
                                 candidate.opportunityAssessment().dataConfidenceScore()).reversed())
                         .thenComparing(Comparator.comparingInt(CompanyCandidate::employees).reversed())

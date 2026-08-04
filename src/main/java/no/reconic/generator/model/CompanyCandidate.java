@@ -137,6 +137,29 @@ public record CompanyCandidate(
         return naceCode + " " + naceDescription;
     }
 
+    public CompanyCandidate withDomainCandidate(DomainCandidate candidate) {
+        return new CompanyCandidate(
+                organizationNumber,
+                name,
+                employees,
+                segment,
+                naceCode,
+                naceDescription,
+                municipalityNumber,
+                municipalityName,
+                address,
+                website,
+                email,
+                phone,
+                entityType,
+                parentOrganizationNumber,
+                candidate,
+                DnsObservation.skipped(candidate == null ? null : candidate.domain()),
+                TechnologyObservation.empty(),
+                OpportunityAssessment.empty()
+        );
+    }
+
     public CompanyCandidate withDnsObservation(DnsObservation observation) {
         return new CompanyCandidate(
                 organizationNumber,

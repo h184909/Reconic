@@ -1044,3 +1044,41 @@ tbody tr:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* Score calibration 0.5.1 */
+.calibration-badge,
+.override-badge,
+.shared-domain-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-top: 7px;
+    padding: 4px 8px;
+    border: 1px solid #d8ba70;
+    border-radius: 999px;
+    background: #fff7df;
+    color: #765711;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.override-badge {
+    border-color: #8caf9f;
+    background: #e5f4ed;
+    color: #164d39;
+}
+
+.shared-domain-badge {
+    border-color: #b8b0d3;
+    background: #f3f0fa;
+    color: #554979;
+}
+
+.calibration-note {
+    display: block;
+    margin-top: 8px;
+    color: #765711;
+    font-size: 0.76rem;
+    line-height: 1.4;
+}

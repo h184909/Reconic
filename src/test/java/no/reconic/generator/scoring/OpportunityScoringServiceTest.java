@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OpportunityScoringServiceTest {
@@ -27,6 +28,7 @@ class OpportunityScoringServiceTest {
                 55,
                 IndustrySegment.LEGAL_ACCOUNTING,
                 DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
                 dns(
                         List.of("0 example-no.mail.protection.outlook.com"),
                         List.of("v=spf1 include:spf.protection.outlook.com ~all"),
@@ -50,6 +52,7 @@ class OpportunityScoringServiceTest {
                 50,
                 IndustrySegment.INDUSTRY,
                 DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
                 dns(
                         List.of("0 example-no.mail.protection.outlook.com"),
                         List.of("v=spf1 include:spf.protection.outlook.com -all"),
@@ -66,23 +69,61 @@ class OpportunityScoringServiceTest {
     }
 
     @Test
-    void mediumDomainConfidenceReducesDataConfidenceButNotOpportunity() {
+    void mediumEmailDomainKeepsScoreButCapsPriorityAtMedium() {
         DnsObservation dns = dns(
                 List.of("0 example-no.mail.protection.outlook.com"),
                 List.of("v=spf1 include:spf.protection.outlook.com ~all"),
-                "v=DMARC1; p=none",
-                "none",
+                null,
+                null,
                 List.of("ns1.example.no")
         );
-        CompanyCandidate high = candidate(50, IndustrySegment.CONSTRUCTION, DomainConfidence.HIGH, dns);
-        CompanyCandidate medium = candidate(50, IndustrySegment.CONSTRUCTION, DomainConfidence.MEDIUM, dns);
+        CompanyCandidate high = candidate(
+                50,
+                IndustrySegment.LEGAL_ACCOUNTING,
+                DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
+                dns
+        );
+        CompanyCandidate medium = candidate(
+                50,
+                IndustrySegment.LEGAL_ACCOUNTING,
+                DomainConfidence.MEDIUM,
+                DomainSource.REGISTERED_EMAIL,
+                dns
+        );
 
         OpportunityAssessment highAssessment = scoringService.score(high);
         OpportunityAssessment mediumAssessment = scoringService.score(medium);
 
         assertEquals(highAssessment.opportunityScore(), mediumAssessment.opportunityScore());
         assertTrue(highAssessment.dataConfidenceScore() > mediumAssessment.dataConfidenceScore());
-        assertTrue(mediumAssessment.warningsDisplay().contains("verifiseres manuelt"));
+        assertTrue(mediumAssessment.priorityCapped());
+        assertEquals(OpportunityPriority.MEDIUM, mediumAssessment.priority());
+        assertTrue(mediumAssessment.warningsDisplay().contains("begrenset til middels"));
+    }
+
+    @Test
+    void manualOverrideIsNotPriorityCapped() {
+        CompanyCandidate candidate = candidate(
+                50,
+                IndustrySegment.LEGAL_ACCOUNTING,
+                DomainConfidence.HIGH,
+                DomainSource.MANUAL_OVERRIDE,
+                dns(
+                        List.of("0 example-no.mail.protection.outlook.com"),
+                        List.of("v=spf1 include:spf.protection.outlook.com ~all"),
+                        null,
+                        null,
+                        List.of("ns1.example.no")
+                )
+        );
+
+        OpportunityAssessment assessment = scoringService.score(candidate);
+
+        assertFalse(assessment.priorityCapped());
+        assertTrue(assessment.priority() == OpportunityPriority.HIGH
+                || assessment.priority() == OpportunityPriority.VERY_HIGH);
+        assertTrue(assessment.evidenceDisplay().contains("manuell fasit"));
     }
 
     @Test
@@ -91,6 +132,7 @@ class OpportunityScoringServiceTest {
                 50,
                 IndustrySegment.CONSULTING_TECHNICAL,
                 DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
                 dns(
                         List.of("0 example-no.mail.protection.outlook.com"),
                         List.of("v=spf1 include:spf.protection.outlook.com -all"),
@@ -102,8 +144,47 @@ class OpportunityScoringServiceTest {
 
         OpportunityAssessment assessment = scoringService.score(candidate);
 
-        assertEquals(12, assessment.providerLandscapeScore());
+        assertEquals(8, assessment.providerLandscapeScore());
         assertTrue(assessment.reasonsDisplay().contains("Bare infrastrukturspor"));
+    }
+
+    @Test
+    void noProviderSignatureHasConservativeWeight() {
+        CompanyCandidate candidate = candidate(
+                50,
+                IndustrySegment.INDUSTRY,
+                DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
+                dns(
+                        List.of("0 example-no.mail.protection.outlook.com"),
+                        List.of("v=spf1 include:spf.protection.outlook.com -all"),
+                        "v=DMARC1; p=reject",
+                        "reject",
+                        List.of("ns1.example.no")
+                )
+        );
+
+        OpportunityAssessment assessment = scoringService.score(candidate);
+
+        assertEquals(10, assessment.providerLandscapeScore());
+        assertTrue(assessment.evidenceDisplay().contains("ikke bevis"));
+    }
+
+    @Test
+    void missingPoliciesWithoutMxAreWeightedWeakly() {
+        CompanyCandidate candidate = candidate(
+                50,
+                IndustrySegment.INDUSTRY,
+                DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
+                dns(List.of(), List.of(), null, null, List.of("ns1.example.no"))
+        );
+
+        OpportunityAssessment assessment = scoringService.score(candidate);
+
+        assertTrue(assessment.technicalOpportunityScore() <= 5);
+        assertTrue(assessment.warningsDisplay().contains("Ingen MX-post"));
+        assertTrue(assessment.evidenceDisplay().contains("vektes derfor svakt"));
     }
 
     @Test
@@ -112,6 +193,7 @@ class OpportunityScoringServiceTest {
                 50,
                 IndustrySegment.INDUSTRY,
                 DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
                 dns(
                         List.of("0 example-no.mail.protection.outlook.com"),
                         List.of("v=spf1 include:spf.protection.outlook.com -all", "v=spf1 include:amazonses.com ~all"),
@@ -125,6 +207,42 @@ class OpportunityScoringServiceTest {
 
         assertTrue(assessment.technicalOpportunityScore() >= 14);
         assertTrue(assessment.reasonsDisplay().contains("Flere SPF-poster"));
+    }
+
+    @Test
+    void sharedDomainIsMarkedAcrossCandidateList() {
+        CompanyCandidate first = candidate(
+                50,
+                IndustrySegment.INDUSTRY,
+                DomainConfidence.HIGH,
+                DomainSource.REGISTERED_WEBSITE,
+                dns(List.of("0 example-no.mail.protection.outlook.com"), List.of("v=spf1 -all"),
+                        "v=DMARC1; p=reject", "reject", List.of("ns1.example.no"))
+        );
+        CompanyCandidate second = new CompanyCandidate(
+                "888888888",
+                "Eksempel To AS",
+                first.employees(),
+                first.segment(),
+                first.naceCode(),
+                first.naceDescription(),
+                first.municipalityNumber(),
+                first.municipalityName(),
+                first.address(),
+                first.website(),
+                first.email(),
+                first.phone(),
+                first.entityType(),
+                first.parentOrganizationNumber(),
+                first.domainCandidate(),
+                first.dnsObservation()
+        ).withTechnologyObservation(first.technologyObservation());
+
+        List<CompanyCandidate> enriched = scoringService.enrich(List.of(first, second));
+
+        assertEquals(2, enriched.getFirst().opportunityAssessment().sharedDomainCount());
+        assertTrue(enriched.getFirst().opportunityAssessment().isSharedDomain());
+        assertTrue(enriched.getFirst().opportunityAssessment().warningsDisplay().contains("deles av 2"));
     }
 
     @Test
@@ -159,6 +277,7 @@ class OpportunityScoringServiceTest {
             int employees,
             IndustrySegment segment,
             DomainConfidence domainConfidence,
+            DomainSource source,
             DnsObservation dns
     ) {
         String domain = "example.no";
@@ -179,11 +298,9 @@ class OpportunityScoringServiceTest {
                 null,
                 new DomainCandidate(
                         domain,
-                        domainConfidence == DomainConfidence.HIGH
-                                ? DomainSource.REGISTERED_WEBSITE
-                                : DomainSource.REGISTERED_EMAIL,
+                        source,
                         domainConfidence,
-                        domainConfidence != DomainConfidence.HIGH,
+                        source == DomainSource.REGISTERED_EMAIL,
                         "Test"
                 ),
                 dns

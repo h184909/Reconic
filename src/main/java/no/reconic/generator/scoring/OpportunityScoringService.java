@@ -3,9 +3,9 @@ package no.reconic.generator.scoring;
 import no.reconic.generator.dns.DnsLookupStatus;
 import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainConfidence;
+import no.reconic.generator.domain.DomainSource;
 import no.reconic.generator.intelligence.DmarcPosture;
 import no.reconic.generator.intelligence.EmailPlatform;
-import no.reconic.generator.intelligence.ProviderRole;
 import no.reconic.generator.intelligence.ProviderSignal;
 import no.reconic.generator.intelligence.SignalConfidence;
 import no.reconic.generator.intelligence.SpfPosture;
@@ -16,6 +16,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class OpportunityScoringService {
@@ -24,14 +28,35 @@ public class OpportunityScoringService {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
+
+        Map<String, Long> domainUsage = candidates.stream()
+                .filter(candidate -> candidate != null && candidate.domainCandidate() != null)
+                .filter(candidate -> candidate.domainCandidate().hasDomain())
+                .map(candidate -> candidate.domainCandidate().domain().toLowerCase(Locale.ROOT))
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
         return candidates.stream()
-                .map(candidate -> candidate == null
-                        ? null
-                        : candidate.withOpportunityAssessment(score(candidate)))
+                .map(candidate -> {
+                    if (candidate == null) {
+                        return null;
+                    }
+                    int sharedDomainCount = candidate.domainCandidate() != null
+                            && candidate.domainCandidate().hasDomain()
+                            ? Math.toIntExact(domainUsage.getOrDefault(
+                                    candidate.domainCandidate().domain().toLowerCase(Locale.ROOT), 1L))
+                            : 0;
+                    return candidate.withOpportunityAssessment(score(candidate, sharedDomainCount));
+                })
                 .toList();
     }
 
     public OpportunityAssessment score(CompanyCandidate candidate) {
+        return score(candidate, candidate != null
+                && candidate.domainCandidate() != null
+                && candidate.domainCandidate().hasDomain() ? 1 : 0);
+    }
+
+    OpportunityAssessment score(CompanyCandidate candidate, int sharedDomainCount) {
         if (candidate == null) {
             return OpportunityAssessment.empty();
         }
@@ -46,13 +71,36 @@ public class OpportunityScoringService {
         int total = Math.min(100, marketFit + technicalOpportunity + providerLandscape);
         int dataConfidence = dataConfidence(candidate, warnings, evidence);
 
+        if (sharedDomainCount > 1) {
+            warnings.add("Domenet deles av " + sharedDomainCount
+                    + " kandidater i dette søket; signalene kan beskrive et konsern eller felles IT-miljø.");
+            evidence.add("Delt domene i søkeresultatet: " + sharedDomainCount + " virksomheter.");
+        }
+
+        OpportunityPriority calculatedPriority = OpportunityPriority.fromScore(total);
+        boolean priorityCapped = requiresDomainVerification(candidate)
+                && (calculatedPriority == OpportunityPriority.HIGH
+                || calculatedPriority == OpportunityPriority.VERY_HIGH);
+        OpportunityPriority finalPriority = priorityCapped
+                ? OpportunityPriority.MEDIUM
+                : calculatedPriority;
+        String priorityExplanation = priorityCapped
+                ? "Prioriteten er midlertidig begrenset til middels fordi domenet bare er utledet fra registrert e-post og må verifiseres."
+                : null;
+        if (priorityCapped) {
+            warnings.add(priorityExplanation);
+        }
+
         if (reasons.isEmpty()) {
             reasons.add("Ingen sterke opportunity-signaler er observert ennå; kandidaten krever manuell vurdering.");
         }
 
         return new OpportunityAssessment(
                 total,
-                OpportunityPriority.fromScore(total),
+                finalPriority,
+                priorityCapped,
+                priorityExplanation,
+                sharedDomainCount,
                 marketFit,
                 technicalOpportunity,
                 providerLandscape,
@@ -101,18 +149,31 @@ public class OpportunityScoringService {
             return 0;
         }
 
+        DnsObservation dns = candidate.dnsObservation();
+        boolean hasMx = dns != null && dns.hasMx();
+        if (!hasMx) {
+            warnings.add("Ingen MX-post ble observert; manglende e-postpolicyer vektes derfor svakt fordi domenets e-postbruk er usikker.");
+        }
+
         int score = 0;
         switch (technology.dmarcPosture()) {
             case MISSING -> {
-                score += 15;
-                reasons.add("Ingen offentlig DMARC-policy ble observert; dette er et konkret område å undersøke.");
+                if (hasMx) {
+                    score += 15;
+                    reasons.add("Ingen offentlig DMARC-policy ble observert på et domene med aktiv MX; dette er et konkret område å undersøke.");
+                } else {
+                    score += 2;
+                    evidence.add("DMARC mangler, men domenet har ingen observert MX og signalet vektes derfor svakt.");
+                }
             }
             case MONITORING -> {
-                score += 10;
-                reasons.add("DMARC står i overvåkingsmodus (p=none), uten håndheving.");
+                score += hasMx ? 10 : 4;
+                reasons.add(hasMx
+                        ? "DMARC står i overvåkingsmodus (p=none), uten håndheving."
+                        : "DMARC står i overvåkingsmodus, men domenet mangler observert MX.");
             }
             case INVALID -> {
-                score += 12;
+                score += hasMx ? 12 : 4;
                 reasons.add("DMARC-posten kunne ikke tolkes som en kjent policy.");
             }
             case UNKNOWN -> warnings.add("DMARC-status er ukjent på grunn av manglende eller teknisk usikker data.");
@@ -130,8 +191,13 @@ public class OpportunityScoringService {
                 reasons.add("SPF tillater alle avsendere (+all), et tydelig teknisk kontrollpunkt.");
             }
             case MISSING -> {
-                score += 9;
-                reasons.add("Ingen offentlig SPF-policy ble observert.");
+                if (hasMx) {
+                    score += 9;
+                    reasons.add("Ingen offentlig SPF-policy ble observert på et domene med aktiv MX.");
+                } else {
+                    score += 1;
+                    evidence.add("SPF mangler, men domenet har ingen observert MX og signalet vektes derfor svakt.");
+                }
             }
             case NEUTRAL -> {
                 score += 7;
@@ -153,8 +219,8 @@ public class OpportunityScoringService {
         if (technology.emailPlatform() == EmailPlatform.MICROSOFT_365) {
             score += 1;
             evidence.add("E-postplattform: Microsoft 365.");
-            if (technology.dmarcPosture() == DmarcPosture.MISSING
-                    || technology.dmarcPosture() == DmarcPosture.MONITORING) {
+            if (hasMx && (technology.dmarcPosture() == DmarcPosture.MISSING
+                    || technology.dmarcPosture() == DmarcPosture.MONITORING)) {
                 score += 4;
                 reasons.add("Microsoft 365 kombinert med svakere DMARC-håndheving gir en konkret samtalestarter.");
             }
@@ -187,7 +253,7 @@ public class OpportunityScoringService {
             if (allSignals.isEmpty()) {
                 reasons.add("Ingen kjent leverandørsignatur ble funnet i offentlig MX, SPF eller NS.");
                 evidence.add("Fravær av signatur er ikke bevis på at virksomheten mangler IT-leverandør.");
-                return 16;
+                return 10;
             }
 
             String roles = String.join(", ", allSignals.stream()
@@ -199,7 +265,7 @@ public class OpportunityScoringService {
             evidence.add("Infrastruktursignaler: " + String.join(", ", allSignals.stream()
                     .map(ProviderSignal::provider)
                     .toList()));
-            return 12;
+            return 8;
         }
 
         if (mspSignals.size() == 1) {
@@ -240,6 +306,10 @@ public class OpportunityScoringService {
             warnings.add("Domenet har lav konfidens.");
         } else if (domainConfidence == DomainConfidence.NONE) {
             warnings.add("Virksomhetsdomene er ikke funnet.");
+        }
+        if (candidate.domainCandidate() != null
+                && candidate.domainCandidate().source() == DomainSource.MANUAL_OVERRIDE) {
+            evidence.add("Domenet er bekreftet gjennom manuell fasit.");
         }
 
         DnsObservation dns = candidate.dnsObservation();
@@ -289,6 +359,13 @@ public class OpportunityScoringService {
         evidence.add("Datatillit: domene " + domainConfidence.getDisplayName()
                 + ", DNS " + dnsStatus.getDisplayName() + ".");
         return clamped;
+    }
+
+    private boolean requiresDomainVerification(CompanyCandidate candidate) {
+        return candidate.domainCandidate() != null
+                && candidate.domainCandidate().hasDomain()
+                && candidate.domainCandidate().source() == DomainSource.REGISTERED_EMAIL
+                && candidate.domainCandidate().requiresVerification();
     }
 
     private int employeeScore(int employees) {
