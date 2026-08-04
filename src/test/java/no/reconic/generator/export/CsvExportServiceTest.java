@@ -36,9 +36,12 @@ class CsvExportServiceTest {
         assertTrue(csv.contains("generatedDomain;domainSource;domainConfidence"));
         assertTrue(csv.contains("mxRecords;spfRecords;dmarcRecord;dmarcPolicy;nameServers;dnsErrors"));
         assertTrue(csv.contains("emailPlatform;emailPlatformConfidence;emailGateway;emailGatewayConfidence"));
-        assertTrue(csv.contains("dmarcPosture;spfPosture;spfAllMechanism;spfSignals"));
-        assertTrue(csv.contains("providerSignals;providerEvidence;technologyEvidence"));
-        assertTrue(csv.contains("manualDomain;isCorrect;comment"));
+        assertTrue(csv.contains("dmarcPosture;spfPosture;spfAllMechanism;spfRedirectTarget;spfSignals"));
+        assertTrue(csv.contains("providerSignals;providerRoles;providerEvidence;technologyEvidence"));
+        assertTrue(csv.contains("opportunityScore;opportunityPriority;marketFitScore"));
+        assertTrue(csv.contains("technicalOpportunityScore;providerLandscapeScore;dataConfidenceScore"));
+        assertTrue(csv.contains("manualEmailPlatform;emailPlatformCorrect;manualProviderRelationship"));
+        assertTrue(csv.contains("providerSignalCorrect;technologyComment;manualDomain;isCorrect;comment"));
         assertTrue(csv.contains("example.no"));
         assertTrue(csv.contains("10 mail.example.no"));
         assertTrue(csv.contains("quarantine"));

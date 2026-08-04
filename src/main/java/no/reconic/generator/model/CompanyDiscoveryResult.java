@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import no.reconic.generator.scoring.OpportunityPriority;
+
 public record CompanyDiscoveryResult(
         Instant generatedAt,
         int fetchedCount,
@@ -111,4 +113,54 @@ public record CompanyDiscoveryResult(
     public String domainCoverageDisplay() {
         return String.format(Locale.forLanguageTag("nb-NO"), "%.1f %%", domainCoveragePercent());
     }
+    public int veryHighOpportunityCount() {
+        return countPriority(OpportunityPriority.VERY_HIGH);
+    }
+
+    public int highOpportunityCount() {
+        return countPriority(OpportunityPriority.HIGH);
+    }
+
+    public int actionableOpportunityCount() {
+        return veryHighOpportunityCount() + highOpportunityCount();
+    }
+
+    public int mediumOpportunityCount() {
+        return countPriority(OpportunityPriority.MEDIUM);
+    }
+
+    public int lowDataConfidenceCount() {
+        return (int) candidates.stream()
+                .filter(candidate -> candidate.opportunityAssessment().dataConfidenceScore() < 60)
+                .count();
+    }
+
+    public double averageOpportunityScore() {
+        return candidates.stream()
+                .mapToInt(candidate -> candidate.opportunityAssessment().opportunityScore())
+                .average()
+                .orElse(0.0);
+    }
+
+    public String averageOpportunityScoreDisplay() {
+        return String.format(Locale.forLanguageTag("nb-NO"), "%.1f", averageOpportunityScore());
+    }
+
+    public double averageDataConfidenceScore() {
+        return candidates.stream()
+                .mapToInt(candidate -> candidate.opportunityAssessment().dataConfidenceScore())
+                .average()
+                .orElse(0.0);
+    }
+
+    public String averageDataConfidenceDisplay() {
+        return String.format(Locale.forLanguageTag("nb-NO"), "%.1f", averageDataConfidenceScore());
+    }
+
+    private int countPriority(OpportunityPriority priority) {
+        return (int) candidates.stream()
+                .filter(candidate -> candidate.opportunityAssessment().priority() == priority)
+                .count();
+    }
+
 }

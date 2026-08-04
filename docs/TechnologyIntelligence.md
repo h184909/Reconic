@@ -1,96 +1,45 @@
-# Technology intelligence 0.4
+# Technology intelligence 0.5
 
-## Formål
+## Leverandørroller
 
-Versjon 0.4 oversetter rå DNS-observasjoner til forklarbare tekniske signaler. Analysen skal gjøre dataene lettere å bruke uten å late som at offentlig DNS alene gir et komplett bilde av en virksomhets IT-miljø.
+Et leverandørspor sier nå både hvem som er observert og hvilken teknisk rolle signaturen vanligvis peker mot:
 
-## E-postplattform
+- `MSP_CANDIDATE`
+- `DNS_PROVIDER`
+- `CONNECTIVITY_PROVIDER`
+- `EMAIL_PROVIDER`
+- `EMAIL_SECURITY_PROVIDER`
+- `OUTBOUND_EMAIL_PROVIDER`
+- `UNKNOWN_TECHNICAL_PROVIDER`
 
-Reconic gjenkjenner foreløpig:
-
-- Microsoft 365
-- Google Workspace
-- annen plattform
-- ingen MX
-- ukjent ved teknisk oppslagsfeil
-
-Direkte treff i MX gir høy konfidens. Treff bare i SPF gir middels konfidens fordi SPF kan beskrive utgående e-post bak en separat gateway.
-
-## E-postgateway
-
-Kjente gateway-signaturer i MX:
-
-- Mimecast
-- Proofpoint
-- Cisco Email Security
-- Telenor
-- Altibox
-
-Gateway og bakliggende plattform holdes adskilt. Et domene kan for eksempel bruke Proofpoint som innkommende gateway og Microsoft 365 som sannsynlig bakliggende plattform.
-
-## DMARC
-
-DMARC klassifiseres som:
-
-- mangler
-- overvåking (`p=none`)
-- quarantine
-- reject
-- ugyldig eller ukjent
-- ukjent ved teknisk oppslagsfeil
-
-`p=none` og manglende DMARC er observerbare signaler, men er ikke alene bevis på dårlig sikkerhet eller et kjøpsbehov.
-
-## SPF
-
-SPF klassifiseres som:
-
-- mangler
-- flere SPF-poster
-- hardfail (`-all`)
-- softfail (`~all`)
-- neutral (`?all`)
-- tillater alle (`+all` eller `all`)
-- funnet uten gjenkjent avslutning
-- ukjent ved teknisk oppslagsfeil
-
-Reconic trekker også ut kjente plattform- og leverandørspor fra SPF.
-
-## Leverandørsignaturer
-
-Første signatursett omfatter:
-
-- Hjelseth
-- Upheads
-- ITsjefen
-- Intility
-- Netpower
-- ECIT
-- Telenor
-- Altibox
-- GlobalConnect
-- Domeneshop
-- one.com
-
-Et treff i én kilde gir middels konfidens. Treff i minst to forskjellige kilder blant MX, SPF og NS gir høy konfidens.
-
-Visningen bruker formuleringen «leverandørsignal», ikke «virksomhetens IT-leverandør». Signaturen kan gjelde DNS, e-post, sikkerhetsgateway eller en eldre teknisk relasjon.
-
-## Bevis
-
-Hvert leverandørsignal beholder råbeviset, for eksempel:
+Eksempel:
 
 ```text
-NS: ns1.hjelseth.com
-SPF: v=spf1 include:spf.hjelseth.com include:spf.protection.outlook.com -all
+Domeneshop
+Rolle: DNS-/domeneleverandør
+Bevis: NS
 ```
 
-Dette gjør konklusjonene etterprøvbare og legger grunnlaget for en senere global signaturdatabase.
+Dette skal ikke oversettes til at Domeneshop drifter virksomhetens IT.
 
-## Bevisste begrensninger
+## Foreløpig rollefordeling
 
-- Ingen samlet leadscore er implementert.
-- Ingen leverandør konkluderes som definitiv.
-- Signatursettet er foreløpig kodebasert, ikke lagret i database.
-- Historikk og endringsdeteksjon er ikke implementert.
-- DNS-data er et øyeblikksbilde og kan endres etter kjøringen.
+- Hjelseth, Upheads, ITsjefen, Intility, Netpower og ECIT: mulig IT-/driftsleverandør
+- Domeneshop og one.com: DNS-/domeneleverandør
+- Telenor, Altibox og GlobalConnect: nett-/konnektivitetsleverandør
+
+Rollene er hypoteser knyttet til signaturene og kan senere flyttes til en global signaturdatabase.
+
+## SPF redirect
+
+SPF med `redirect=<domene>` klassifiseres nå separat, og måldomenet lagres som `spfRedirectTarget`.
+
+Reconic følger foreløpig ikke redirect-kjeden rekursivt. Det ville krevd nye DNS-oppslag, løkkedeteksjon og egne tidsavbrudd. I 0.5 vises derfor delegeringen eksplisitt uten å late som den endelige policyen allerede er analysert.
+
+## Microsoft 365
+
+Microsoft 365 beholdes som teknologi- og filtersignal. Det gir svært lite opportunity-poeng alene fordi valideringsutvalget viste at plattformen er svært vanlig.
+
+## Tolkning
+
+Alle signaler er offentlige tekniske observasjoner. De er ikke bekreftede kontraktsforhold, og de kan være historiske, delte mellom leverandører eller knyttet til bare én del av infrastrukturen.

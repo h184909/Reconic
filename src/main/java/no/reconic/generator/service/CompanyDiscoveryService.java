@@ -21,6 +21,7 @@ import no.reconic.generator.intelligence.EmailGateway;
 import no.reconic.generator.intelligence.EmailPlatform;
 import no.reconic.generator.intelligence.TechnologyAnalysisService;
 import no.reconic.generator.intelligence.TechnologyObservation;
+import no.reconic.generator.scoring.OpportunityScoringService;
 import no.reconic.generator.web.LeadSearchForm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,17 +48,20 @@ public class CompanyDiscoveryService {
     private final DomainDiscoveryService domainDiscoveryService;
     private final DnsEnrichmentService dnsEnrichmentService;
     private final TechnologyAnalysisService technologyAnalysisService;
+    private final OpportunityScoringService opportunityScoringService;
 
     public CompanyDiscoveryService(
             BrregClient brregClient,
             DomainDiscoveryService domainDiscoveryService,
             DnsEnrichmentService dnsEnrichmentService,
-            TechnologyAnalysisService technologyAnalysisService
+            TechnologyAnalysisService technologyAnalysisService,
+            OpportunityScoringService opportunityScoringService
     ) {
         this.brregClient = brregClient;
         this.domainDiscoveryService = domainDiscoveryService;
         this.dnsEnrichmentService = dnsEnrichmentService;
         this.technologyAnalysisService = technologyAnalysisService;
+        this.opportunityScoringService = opportunityScoringService;
     }
 
     public CompanyDiscoveryResult discover(LeadSearchForm form) {
@@ -100,7 +104,18 @@ public class CompanyDiscoveryService {
                 .toList();
 
         List<CompanyCandidate> dnsCandidates = dnsEnrichmentService.enrich(sortedCandidates);
-        List<CompanyCandidate> candidates = technologyAnalysisService.enrich(dnsCandidates);
+        List<CompanyCandidate> technologyCandidates = technologyAnalysisService.enrich(dnsCandidates);
+        List<CompanyCandidate> candidates = opportunityScoringService.enrich(technologyCandidates).stream()
+                .sorted(Comparator
+                        .comparingInt((CompanyCandidate candidate) ->
+                                candidate.opportunityAssessment().opportunityScore())
+                        .reversed()
+                        .thenComparing(Comparator.comparingInt((CompanyCandidate candidate) ->
+                                candidate.opportunityAssessment().dataConfidenceScore()).reversed())
+                        .thenComparing(Comparator.comparingInt(CompanyCandidate::employees).reversed())
+                        .thenComparing(CompanyCandidate::name,
+                                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .toList();
 
         Map<IndustrySegment, Long> segmentCounts = candidates.stream()
                 .collect(Collectors.groupingBy(

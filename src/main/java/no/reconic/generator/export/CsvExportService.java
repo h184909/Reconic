@@ -6,6 +6,7 @@ import no.reconic.generator.intelligence.ProviderSignal;
 import no.reconic.generator.intelligence.TechnologyObservation;
 import no.reconic.generator.model.CompanyCandidate;
 import no.reconic.generator.model.CompanyDiscoveryResult;
+import no.reconic.generator.scoring.OpportunityAssessment;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -71,10 +72,26 @@ public class CsvExportService {
                 "dmarcPosture",
                 "spfPosture",
                 "spfAllMechanism",
+                "spfRedirectTarget",
                 "spfSignals",
                 "providerSignals",
+                "providerRoles",
                 "providerEvidence",
                 "technologyEvidence",
+                "opportunityScore",
+                "opportunityPriority",
+                "marketFitScore",
+                "technicalOpportunityScore",
+                "providerLandscapeScore",
+                "dataConfidenceScore",
+                "reasonsToContact",
+                "uncertaintyWarnings",
+                "scoreEvidence",
+                "manualEmailPlatform",
+                "emailPlatformCorrect",
+                "manualProviderRelationship",
+                "providerSignalCorrect",
+                "technologyComment",
                 "manualDomain",
                 "isCorrect",
                 "comment"
@@ -84,6 +101,7 @@ public class CsvExportService {
             DomainCandidate domain = candidate.domainCandidate();
             DnsObservation dns = candidate.dnsObservation();
             TechnologyObservation technology = candidate.technologyObservation();
+            OpportunityAssessment opportunity = candidate.opportunityAssessment();
 
             appendRow(csv, List.of(
                     value(candidate.organizationNumber()),
@@ -119,10 +137,26 @@ public class CsvExportService {
                     technology == null ? "" : technology.dmarcPosture().getDisplayName(),
                     technology == null ? "" : technology.spfPosture().getDisplayName(),
                     technology == null ? "" : value(technology.spfAllMechanism()),
+                    technology == null ? "" : value(technology.spfRedirectTarget()),
                     technology == null ? "" : technology.spfSignalsDisplay(),
                     technology == null ? "" : providerSummary(technology.providerSignals()),
+                    technology == null ? "" : providerRoles(technology.providerSignals()),
                     technology == null ? "" : technology.providerEvidenceDisplay(),
                     technology == null ? "" : technology.evidenceDisplay(),
+                    opportunity == null ? "" : Integer.toString(opportunity.opportunityScore()),
+                    opportunity == null ? "" : opportunity.priority().getDisplayName(),
+                    opportunity == null ? "" : Integer.toString(opportunity.marketFitScore()),
+                    opportunity == null ? "" : Integer.toString(opportunity.technicalOpportunityScore()),
+                    opportunity == null ? "" : Integer.toString(opportunity.providerLandscapeScore()),
+                    opportunity == null ? "" : Integer.toString(opportunity.dataConfidenceScore()),
+                    opportunity == null ? "" : opportunity.reasonsDisplay(),
+                    opportunity == null ? "" : opportunity.warningsDisplay(),
+                    opportunity == null ? "" : opportunity.evidenceDisplay(),
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
                     "",
                     "",
                     ""
@@ -142,8 +176,18 @@ public class CsvExportService {
         }
         return String.join(" | ", signals.stream()
                 .map(signal -> signal.provider()
-                        + " [" + signal.sourcesDisplay() + "; "
+                        + " [" + signal.role().getDisplayName() + "; "
+                        + signal.sourcesDisplay() + "; "
                         + signal.confidence().getDisplayName() + "]")
+                .toList());
+    }
+
+    private String providerRoles(List<ProviderSignal> signals) {
+        if (signals == null || signals.isEmpty()) {
+            return "";
+        }
+        return String.join(" | ", signals.stream()
+                .map(signal -> signal.provider() + ": " + signal.role().getDisplayName())
                 .toList());
     }
 

@@ -1,21 +1,81 @@
-# Scoring
+# Forklarbar opportunity-score 0.5
 
-Scoring skal være forklarbar, testbar og separert fra datakvalitet.
+## Formål
 
-## Planlagte delscorer
+Scoren prioriterer hvilke virksomheter som er mest interessante å undersøke først. Den er en foreløpig **salgsrelevans-score**, ikke en sikkerhetskarakter og ikke en påstand om at virksomheten har et problem.
 
-- Business fit
-- Technical opportunity
-- Sales opportunity
-- Data confidence
-- Overall priority
+## To separate tall
 
-## Regler
+Reconic viser alltid:
 
-1. Manglende data skal ikke gi positive sikkerhetspoeng.
-2. En høy samlet prioritet krever minimum datakonfidens.
-3. Hvert poengbidrag skal kunne vises som en menneskelesbar grunn.
-4. Spekulative signaler skal vektes lavere enn direkte observasjoner.
-5. Vektene skal justeres basert på blindtester og faktiske salgsresultater, ikke magefølelse alene.
+- `opportunityScore` – hvor interessant kandidaten ser ut basert på marked, tekniske observasjoner og leverandørbilde
+- `dataConfidenceScore` – hvor godt datagrunnlaget støtter vurderingen
 
-Ingen endelig scoremodell er vedtatt ennå.
+Et usikkert domene reduserer datatilliten, men endrer ikke automatisk markeds- eller opportunity-signalet.
+
+## Opportunity-komponenter
+
+### Markedsmatch – 0 til 35
+
+Foreløpig vekting basert på:
+
+- antall ansatte
+- valgt bransjesegment
+
+Modellen favoriserer foreløpig bedrifter i omtrent 25–120-ansatteområdet. Vektene er hypoteser og skal senere kalibreres mot faktisk salgserfaring.
+
+### Teknisk mulighet – 0 til 45
+
+Observerbare signaler kan gi poeng, blant annet:
+
+- manglende DMARC
+- DMARC i overvåkingsmodus (`p=none`)
+- flere SPF-poster
+- SPF som tillater alle (`+all`)
+- manglende eller mykere SPF-policy
+- kombinasjonen Microsoft 365 og svakere DMARC-håndheving
+
+Microsoft 365 alene gir nesten ingen poeng fordi valideringsutvalget viste at dette er normaltilstanden for de fleste kandidatene.
+
+### Leverandørbilde – 0 til 20
+
+Leverandørsignaler er nå rollebaserte:
+
+- mulig IT-/driftsleverandør
+- DNS-/domeneleverandør
+- nett-/konnektivitetsleverandør
+- e-post-/gatewayrelaterte roller
+- ukjent teknisk rolle
+
+Domeneshop eller one.com via navneservere tolkes derfor ikke som en bekreftet MSP-relasjon. Fravær av en kjent MSP-signatur er heller ikke bevis på at virksomheten mangler leverandør.
+
+## Prioritet
+
+- 80–100: svært høy
+- 65–79: høy
+- 45–64: middels
+- 0–44: lav
+
+## Datatillit
+
+Datatillit beregnes separat fra:
+
+- domenekonfidens
+- DNS-status
+- e-postplattformens konfidens
+- om SPF og DMARC kunne tolkes
+- grunnleggende firmakompletthet som telefon, adresse og kontaktfelt
+
+## Forklarbarhet
+
+Hver kandidat lagrer:
+
+- grunner til å undersøke kandidaten
+- usikkerhetspunkter
+- scorefordeling
+- datatillit
+- bevis som støtter vurderingen
+
+## Viktig begrensning
+
+Vektene er en første testbar hypotese. De skal ikke brukes som endelig kommersiell modell før resultatene er blindtestet av personer som faktisk selger IT-tjenester og sammenlignet med reelle salgsutfall.

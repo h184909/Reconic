@@ -88,6 +88,7 @@ class TechnologyAnalysisServiceTest {
 
         ProviderSignal signal = observation.primaryProviderSignal();
         assertEquals("Hjelseth", signal.provider());
+        assertEquals(ProviderRole.MSP_CANDIDATE, signal.role());
         assertEquals(SignalConfidence.HIGH, signal.confidence());
         assertTrue(signal.sources().containsAll(List.of(SignalSource.MX, SignalSource.SPF, SignalSource.NS)));
     }
@@ -129,6 +130,37 @@ class TechnologyAnalysisServiceTest {
         assertEquals(EmailPlatform.UNKNOWN, observation.emailPlatform());
         assertEquals(SpfPosture.UNKNOWN, observation.spfPosture());
         assertEquals(DmarcPosture.UNKNOWN, observation.dmarcPosture());
+    }
+
+    @Test
+    void classifiesDomeneshopAsDnsProviderInsteadOfMsp() {
+        TechnologyObservation observation = service.analyze(dns(
+                List.of("10 example-no.mail.protection.outlook.com"),
+                List.of("v=spf1 include:spf.protection.outlook.com -all"),
+                "v=DMARC1; p=reject",
+                "reject",
+                List.of("ns1.hyp.net", "ns2.hyp.net")
+        ));
+
+        ProviderSignal signal = observation.primaryProviderSignal();
+        assertEquals("Domeneshop", signal.provider());
+        assertEquals(ProviderRole.DNS_PROVIDER, signal.role());
+        assertFalse(observation.hasMspCandidateSignals());
+    }
+
+    @Test
+    void classifiesSpfRedirectAndKeepsTarget() {
+        TechnologyObservation observation = service.analyze(dns(
+                List.of("10 mail.example.no"),
+                List.of("v=spf1 include:sender.example redirect=_spf.policy.example"),
+                null,
+                null,
+                List.of("ns1.example.no")
+        ));
+
+        assertEquals(SpfPosture.REDIRECTED, observation.spfPosture());
+        assertEquals("_spf.policy.example", observation.spfRedirectTarget());
+        assertTrue(observation.spfSignals().contains("SPF redirect: _spf.policy.example"));
     }
 
     private DnsObservation dns(

@@ -7,6 +7,7 @@ public enum SpfPosture {
     SOFT_FAIL("Softfail (~all)", "monitoring"),
     NEUTRAL("Neutral (?all)", "warning"),
     PASS_ALL("Tillater alle (+all)", "danger"),
+    REDIRECTED("Redirect til annen SPF-policy", "redirected"),
     PRESENT("Funnet", "present"),
     UNKNOWN("Ukjent", "unknown");
 

@@ -10,10 +10,38 @@ public record TechnologyObservation(
         DmarcPosture dmarcPosture,
         SpfPosture spfPosture,
         String spfAllMechanism,
+        String spfRedirectTarget,
         List<String> spfSignals,
         List<ProviderSignal> providerSignals,
         List<String> evidence
 ) {
+    public TechnologyObservation(
+            EmailPlatform emailPlatform,
+            SignalConfidence emailPlatformConfidence,
+            EmailGateway emailGateway,
+            SignalConfidence emailGatewayConfidence,
+            DmarcPosture dmarcPosture,
+            SpfPosture spfPosture,
+            String spfAllMechanism,
+            List<String> spfSignals,
+            List<ProviderSignal> providerSignals,
+            List<String> evidence
+    ) {
+        this(
+                emailPlatform,
+                emailPlatformConfidence,
+                emailGateway,
+                emailGatewayConfidence,
+                dmarcPosture,
+                spfPosture,
+                spfAllMechanism,
+                null,
+                spfSignals,
+                providerSignals,
+                evidence
+        );
+    }
+
     public TechnologyObservation {
         emailPlatform = emailPlatform == null ? EmailPlatform.UNKNOWN : emailPlatform;
         emailPlatformConfidence = emailPlatformConfidence == null ? SignalConfidence.NONE : emailPlatformConfidence;
@@ -22,6 +50,7 @@ public record TechnologyObservation(
         dmarcPosture = dmarcPosture == null ? DmarcPosture.UNKNOWN : dmarcPosture;
         spfPosture = spfPosture == null ? SpfPosture.UNKNOWN : spfPosture;
         spfAllMechanism = normalize(spfAllMechanism);
+        spfRedirectTarget = normalize(spfRedirectTarget);
         spfSignals = spfSignals == null ? List.of() : List.copyOf(spfSignals);
         providerSignals = providerSignals == null ? List.of() : List.copyOf(providerSignals);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
@@ -36,6 +65,7 @@ public record TechnologyObservation(
                 DmarcPosture.UNKNOWN,
                 SpfPosture.UNKNOWN,
                 null,
+                null,
                 List.of(),
                 List.of(),
                 List.of()
@@ -48,6 +78,14 @@ public record TechnologyObservation(
 
     public boolean hasProviderSignals() {
         return !providerSignals.isEmpty();
+    }
+
+    public boolean hasMspCandidateSignals() {
+        return providerSignals.stream().anyMatch(ProviderSignal::isMspCandidate);
+    }
+
+    public List<ProviderSignal> mspCandidateSignals() {
+        return providerSignals.stream().filter(ProviderSignal::isMspCandidate).toList();
     }
 
     public ProviderSignal primaryProviderSignal() {
@@ -64,7 +102,8 @@ public record TechnologyObservation(
 
     public String providerSignalsDisplay() {
         return String.join(" | ", providerSignals.stream()
-                .map(signal -> signal.provider() + " (" + signal.sourcesDisplay() + ")")
+                .map(signal -> signal.provider() + " (" + signal.role().getDisplayName()
+                        + "; " + signal.sourcesDisplay() + ")")
                 .toList());
     }
 

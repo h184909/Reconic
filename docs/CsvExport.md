@@ -1,48 +1,43 @@
-# CSV export 0.3
+# CSV export 0.5
 
-## Eksporter alle
+Begge eksportene inneholder virksomhetsdata, domene, rå DNS, tolkede teknologisignaler og opportunity-vurdering.
 
-`/export/all.csv` eksporterer alle kandidatene fra det siste søket i nettleserøkten.
-Filen inneholder:
+## Nye scorefelt
 
-- virksomhetsdata fra Enhetsregisteret
-- funnet domene, kilde og konfidens
-- MX, SPF, DMARC og NS
-- tekniske DNS-feil
-- tomme kolonner for manuell fasit
+- `opportunityScore`
+- `opportunityPriority`
+- `marketFitScore`
+- `technicalOpportunityScore`
+- `providerLandscapeScore`
+- `dataConfidenceScore`
+- `reasonsToContact`
+- `uncertaintyWarnings`
+- `scoreEvidence`
 
-## Tilfeldig valideringsutvalg
+## Nye teknologi- og rollefelt
 
-`/export/validation.csv` lager et tilfeldig utvalg på inntil 50 kandidater som har domene.
-Når datagrunnlaget er stort nok, velges:
+- `spfRedirectTarget`
+- `providerRoles`
+- leverandørsammendraget inkluderer rolle, beviskilde og konfidens
 
-- 30 kandidater med høy domenekonfidens
-- 20 kandidater med middels domenekonfidens
+## Nye manuelle valideringskolonner
 
-Hvis en gruppe har for få kandidater, fylles resten fra andre kandidater med domene.
-Kandidater uten domene tas ikke med i domenepresisjonsutvalget.
-
-## Manuelle kolonner
-
-De siste kolonnene er tomme:
-
+- `manualEmailPlatform`
+- `emailPlatformCorrect`
+- `manualProviderRelationship`
+- `providerSignalCorrect`
+- `technologyComment`
 - `manualDomain`
 - `isCorrect`
 - `comment`
 
-Disse fylles manuelt før presisjon beregnes.
-
 ## Filformat
 
-- UTF-8 med BOM for god støtte i Excel
+- UTF-8 med BOM
 - semikolon som skilletegn
 - CRLF-linjeskift
-- verdier med semikolon, anførselstegn eller linjeskift blir korrekt sitert
+- korrekt CSV-escaping av semikolon, anførselstegn og linjeskift
 
 ## Begrensning
 
-Det siste resultatet lagres bare i den lokale HTTP-sessionen. Etter omstart av applikasjonen eller utløpt session må et nytt søk kjøres før eksport.
-
-## Teknologisignaler i 0.4
-
-Eksporten inneholder nå også tolkede felter for e-postplattform, gateway, DMARC, SPF og leverandørsignaturer. Rå DNS-poster beholdes ved siden av de tolkede feltene, slik at signalene kan etterprøves.
+Det siste søkeresultatet ligger bare i HTTP-sessionen. Et nytt søk må kjøres etter omstart eller utløpt session.

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic – tekniske signaler</title>
+    <title>Reconic – forklarbar opportunity-score</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
@@ -16,12 +16,11 @@
 
 <main class="shell page">
     <section class="hero">
-        <p class="eyebrow">Technology intelligence 0.4</p>
-        <h1>Gjør rå DNS-data forståelig</h1>
+        <p class="eyebrow">Opportunity intelligence 0.5</p>
+        <h1>Prioriter leads uten å skjule begrunnelsen</h1>
         <p class="intro">
-            Reconic oversetter MX, SPF, DMARC og navneservere til forklarbare signaler om e-postplattform,
-            gateway og mulige infrastrukturleverandører. Signalene er observasjoner med bevis og konfidens,
-            ikke bastante påstander om hvem som drifter hele IT-miljøet.
+            Reconic rangerer kandidater etter markedsmatch, observerbare tekniske muligheter og leverandørbildet.
+            Opportunity-score og datatillit vises separat, slik at en interessant kandidat ikke forveksles med et sikkert datagrunnlag.
         </p>
     </section>
 
@@ -97,8 +96,8 @@
             </label>
 
             <div class="submit-row">
-                <button type="submit" class="primary-button">Hent og analyser kandidater</button>
-                <small class="muted">Søket gjør domene-, DNS- og signalanalyse i samme kjøring.</small>
+                <button type="submit" class="primary-button">Hent, analyser og ranger</button>
+                <small class="muted">Søket kjører domene-, DNS-, signal- og opportunity-analyse.</small>
             </div>
         </form>
 
@@ -111,51 +110,50 @@
                 <p class="section-kicker">Resultat</p>
                 <h2 th:text="${result.candidateCount + ' kandidater'}">0 kandidater</h2>
                 <p class="muted">
-                    <span th:text="${result.fetchedCount}">0</span> rå treff hentet,
-                    <span th:text="${result.filteredOutCount}">0</span> filtrert bort.
+                    Listen er sortert etter opportunity-score, deretter datatillit og antall ansatte.
                 </p>
             </div>
             <span class="timestamp" th:text="${result.generatedAtDisplay()}">01.08.2026</span>
         </div>
 
-        <div class="metric-grid intelligence-metric-grid">
-            <article class="metric-card">
-                <span>Microsoft 365</span>
-                <strong th:text="${result.microsoft365Count}">0</strong>
-                <small>Direkte MX eller støtte fra SPF</small>
+        <div class="metric-grid opportunity-metric-grid">
+            <article class="metric-card opportunity-card">
+                <span>Gjennomsnittlig opportunity</span>
+                <strong th:text="${result.averageOpportunityScoreDisplay()}">0</strong>
+                <small>Salgsrelevans, ikke sikkerhetskarakter</small>
             </article>
-            <article class="metric-card">
-                <span>Google Workspace</span>
-                <strong th:text="${result.googleWorkspaceCount}">0</strong>
-                <small>Direkte MX eller støtte fra SPF</small>
+            <article class="metric-card opportunity-card">
+                <span>Høy prioritet</span>
+                <strong th:text="${result.actionableOpportunityCount()}">0</strong>
+                <small>Svært høy eller høy opportunity</small>
             </article>
-            <article class="metric-card">
-                <span>Separat e-postgateway</span>
-                <strong th:text="${result.gatewayCount}">0</strong>
-                <small>Mimecast, Proofpoint, Cisco, Telenor eller Altibox</small>
+            <article class="metric-card confidence-card">
+                <span>Gjennomsnittlig datatillit</span>
+                <strong th:text="${result.averageDataConfidenceDisplay()}">0</strong>
+                <small>Separat fra opportunity-scoren</small>
             </article>
-            <article class="metric-card">
-                <span>Leverandørsignal</span>
-                <strong th:text="${result.providerSignalCount}">0</strong>
-                <small>Minst ett gjenkjent spor i MX, SPF eller NS</small>
+            <article class="metric-card confidence-card">
+                <span>Lav datatillit</span>
+                <strong th:text="${result.lowDataConfidenceCount()}">0</strong>
+                <small>Under 60 av 100</small>
             </article>
         </div>
 
-        <div class="metric-grid dmarc-metric-grid">
+        <div class="metric-grid intelligence-metric-grid compact-metrics">
             <article class="metric-card compact">
-                <span>DMARC håndheves</span>
-                <strong th:text="${result.dmarcEnforcedCount}">0</strong>
-                <small>Quarantine eller reject</small>
+                <span>Microsoft 365</span>
+                <strong th:text="${result.microsoft365Count}">0</strong>
+                <small>Et stack-signal, ikke poengdriver alene</small>
             </article>
             <article class="metric-card compact">
-                <span>DMARC overvåking</span>
-                <strong th:text="${result.dmarcMonitoringCount}">0</strong>
-                <small>Policy p=none</small>
+                <span>DMARC mangler / overvåking</span>
+                <strong th:text="${result.dmarcMissingCount + result.dmarcMonitoringCount}">0</strong>
+                <small>Observerbare områder å undersøke</small>
             </article>
             <article class="metric-card compact">
-                <span>DMARC mangler</span>
-                <strong th:text="${result.dmarcMissingCount}">0</strong>
-                <small>Ingen offentlig DMARC-post observert</small>
+                <span>Leverandørsignal</span>
+                <strong th:text="${result.providerSignalCount}">0</strong>
+                <small>Rolle og bevis beholdes separat</small>
             </article>
             <article class="metric-card compact">
                 <span>Domener funnet</span>
@@ -167,7 +165,7 @@
         <div class="export-panel">
             <div>
                 <strong>Eksporter resultatet</strong>
-                <small>CSV inneholder både rå DNS-poster, tolkede signaler, bevis og tomme fasitkolonner.</small>
+                <small>CSV inneholder scorekomponenter, datatillit, leverandørroller, bevis og nye valideringskolonner.</small>
             </div>
             <div class="export-actions">
                 <a class="secondary-button" th:href="@{/export/all.csv}">Eksporter alle</a>
@@ -183,26 +181,28 @@
                 </div>
             </div>
             <div class="confidence-summary">
-                <span class="confidence-badge high">
-                    Høy domene-konfidens <strong th:text="${result.highConfidenceCount}">0</strong>
+                <span class="priority-badge very-high">
+                    Svært høy <strong th:text="${result.veryHighOpportunityCount()}">0</strong>
                 </span>
-                <span class="confidence-badge medium">
-                    Middels domene-konfidens <strong th:text="${result.mediumConfidenceCount}">0</strong>
+                <span class="priority-badge high">
+                    Høy <strong th:text="${result.highOpportunityCount()}">0</strong>
+                </span>
+                <span class="priority-badge medium">
+                    Middels <strong th:text="${result.mediumOpportunityCount()}">0</strong>
                 </span>
             </div>
         </div>
 
         <div class="table-wrap" th:if="${!result.candidates.isEmpty()}">
-            <table class="intelligence-table">
+            <table class="opportunity-table">
                 <thead>
                 <tr>
                     <th>Bedrift</th>
-                    <th>Ansatte</th>
-                    <th>Domene</th>
-                    <th>E-post</th>
-                    <th>DMARC</th>
-                    <th>SPF</th>
+                    <th>Opportunity</th>
+                    <th>Domene / e-post</th>
+                    <th>DMARC / SPF</th>
                     <th>Leverandørsignal</th>
+                    <th>Derfor undersøker du</th>
                     <th>Detaljer</th>
                 </tr>
                 </thead>
@@ -212,11 +212,25 @@
                         <strong th:text="${candidate.name}">Firma AS</strong>
                         <small class="table-subtext" th:text="${candidate.organizationNumber}">999999999</small>
                         <small class="table-subtext"
-                               th:text="${candidate.segment.displayName + ' · ' + (candidate.municipalityName ?: 'Ukjent kommune')}">
-                            Industri · Sandnes
+                               th:text="${candidate.employees + ' ansatte · ' + candidate.segment.displayName + ' · '
+                               + (candidate.municipalityName ?: 'Ukjent kommune')}">
+                            50 ansatte · Industri · Sandnes
                         </small>
                     </td>
-                    <td class="number" th:text="${candidate.employees}">50</td>
+                    <td class="score-cell">
+                        <div class="score-ring"
+                             th:classappend="${candidate.opportunityAssessment.priority.cssClass}">
+                            <strong th:text="${candidate.opportunityAssessment.opportunityScore}">72</strong>
+                            <span>/100</span>
+                        </div>
+                        <span class="priority-badge"
+                              th:classappend="${candidate.opportunityAssessment.priority.cssClass}"
+                              th:text="${candidate.opportunityAssessment.priority.displayName}">Høy</span>
+                        <small class="data-confidence"
+                               th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">
+                            Datatillit 82/100
+                        </small>
+                    </td>
                     <td>
                         <a th:if="${candidate.domainCandidate.hasDomain()}"
                            th:href="${candidate.domainCandidate.url()}"
@@ -227,15 +241,8 @@
                         <span class="confidence-badge"
                               th:classappend="${candidate.domainCandidate.confidence.cssClass}"
                               th:text="${candidate.domainCandidate.confidence.displayName}">Høy</span>
-                    </td>
-                    <td>
-                        <span class="signal-badge"
-                              th:classappend="${candidate.technologyObservation.emailPlatform.cssClass}"
-                              th:text="${candidate.technologyObservation.emailPlatform.displayName}">Microsoft 365</span>
                         <small class="table-subtext"
-                               th:text="${'Konfidens: ' + candidate.technologyObservation.emailPlatformConfidence.displayName}">
-                            Konfidens: Høy
-                        </small>
+                               th:text="${candidate.technologyObservation.emailPlatform.displayName}">Microsoft 365</small>
                         <small class="table-subtext gateway-note"
                                th:if="${candidate.technologyObservation.hasGateway()}"
                                th:text="${'Gateway: ' + candidate.technologyObservation.emailGateway.displayName}">
@@ -246,30 +253,57 @@
                         <span class="signal-badge"
                               th:classappend="${candidate.technologyObservation.dmarcPosture.cssClass}"
                               th:text="${candidate.technologyObservation.dmarcPosture.displayName}">Reject</span>
-                        <small class="table-subtext">Offentlig DMARC-policy</small>
-                    </td>
-                    <td>
-                        <span class="signal-badge"
+                        <span class="signal-badge second-signal"
                               th:classappend="${candidate.technologyObservation.spfPosture.cssClass}"
                               th:text="${candidate.technologyObservation.spfPosture.displayName}">Hardfail (-all)</span>
                         <small class="table-subtext"
-                               th:if="${!candidate.technologyObservation.spfSignals.isEmpty()}"
-                               th:text="${candidate.technologyObservation.spfSignalsDisplay()}">Microsoft 365</small>
+                               th:if="${candidate.technologyObservation.spfRedirectTarget != null}"
+                               th:text="${'Redirect: ' + candidate.technologyObservation.spfRedirectTarget}">Redirect</small>
                     </td>
                     <td th:with="provider=${candidate.technologyObservation.primaryProviderSignal()}">
                         <div th:if="${provider != null}">
                             <strong th:text="${provider.provider}">Hjelseth</strong>
-                            <span class="confidence-badge"
-                                  th:classappend="${provider.confidence.cssClass}"
-                                  th:text="${provider.confidence.displayName}">Høy</span>
+                            <small class="provider-role"
+                                   th:classappend="${provider.role.cssClass}"
+                                   th:text="${provider.role.displayName}">Mulig IT-/driftsleverandør</small>
                             <small class="table-subtext" th:text="${'Bevis: ' + provider.sourcesDisplay()}">Bevis: NS + SPF</small>
                         </div>
                         <span class="muted" th:if="${provider == null}">Ingen kjent signatur</span>
                     </td>
                     <td>
+                        <ul class="reason-list compact-reasons">
+                            <li th:each="reason, stat : ${candidate.opportunityAssessment.reasonsToContact}"
+                                th:if="${stat.index < 2}"
+                                th:text="${reason}">Begrunnelse</li>
+                        </ul>
+                        <small class="warning-count"
+                               th:if="${candidate.opportunityAssessment.hasWarnings()}"
+                               th:text="${candidate.opportunityAssessment.uncertaintyWarnings.size()
+                               + ' usikkerhetspunkt'}">1 usikkerhetspunkt</small>
+                    </td>
+                    <td>
                         <details class="raw-details">
-                            <summary>Vis rådata</summary>
-                            <div class="detail-grid">
+                            <summary>Åpne analyse</summary>
+                            <div class="detail-grid score-detail-grid">
+                                <div class="score-breakdown">
+                                    <strong>Scorefordeling</strong>
+                                    <span th:text="${candidate.opportunityAssessment.scoreBreakdownDisplay()}">Fordeling</span>
+                                    <span th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">Datatillit</span>
+                                </div>
+                                <div>
+                                    <strong>Alle grunner</strong>
+                                    <ul class="reason-list">
+                                        <li th:each="reason : ${candidate.opportunityAssessment.reasonsToContact}"
+                                            th:text="${reason}">Grunn</li>
+                                    </ul>
+                                </div>
+                                <div th:if="${candidate.opportunityAssessment.hasWarnings()}">
+                                    <strong>Usikkerhet</strong>
+                                    <ul class="warning-list">
+                                        <li th:each="warning : ${candidate.opportunityAssessment.uncertaintyWarnings}"
+                                            th:text="${warning}">Advarsel</li>
+                                    </ul>
+                                </div>
                                 <div>
                                     <strong>Domenegrunnlag</strong>
                                     <span th:text="${candidate.domainCandidate.explanation}">Forklaring</span>
@@ -291,9 +325,9 @@
                                     <span th:text="${candidate.dnsObservation.nameServersDisplay()}">NS</span>
                                 </div>
                                 <div th:if="${candidate.technologyObservation.hasProviderSignals()}">
-                                    <strong>Leverandørbevis</strong>
-                                    <span th:each="provider : ${candidate.technologyObservation.providerSignals}">
-                                        <b th:text="${provider.provider + ': '}">Hjelseth:</b>
+                                    <strong>Leverandørsignaler</strong>
+                                    <span class="provider-detail" th:each="provider : ${candidate.technologyObservation.providerSignals}">
+                                        <b th:text="${provider.provider + ' – ' + provider.role.displayName + ': '}">Leverandør:</b>
                                         <span th:text="${provider.evidenceDisplay()}">NS: ns1...</span>
                                     </span>
                                 </div>

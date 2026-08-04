@@ -20,19 +20,20 @@ import java.util.regex.Pattern;
 public class TechnologyAnalysisService {
 
     private static final Pattern SPF_ALL_MECHANISM = Pattern.compile("(?i)(?:^|\\s)([+~?\\-]?)all(?:\\s|$)");
+    private static final Pattern SPF_REDIRECT = Pattern.compile("(?i)(?:^|\\s)redirect=([^\\s]+)");
 
     private static final List<ProviderDefinition> PROVIDERS = List.of(
-            new ProviderDefinition("Hjelseth", List.of("hjelseth.com")),
-            new ProviderDefinition("Upheads", List.of("upheads.no", "upheads.com", "upheads.org")),
-            new ProviderDefinition("ITsjefen", List.of("itsjefen.net")),
-            new ProviderDefinition("Intility", List.of("intility.com")),
-            new ProviderDefinition("Netpower", List.of("netpower.no")),
-            new ProviderDefinition("ECIT", List.of("ecitinfra.no", "ecit.com")),
-            new ProviderDefinition("Telenor", List.of("telenor.net", "online.no")),
-            new ProviderDefinition("Altibox", List.of("altibox.no")),
-            new ProviderDefinition("GlobalConnect", List.of("globalconnect.no", "broadnet.no")),
-            new ProviderDefinition("Domeneshop", List.of("hyp.net", "domeneshop.no")),
-            new ProviderDefinition("one.com", List.of("brand.one.com"))
+            new ProviderDefinition("Hjelseth", ProviderRole.MSP_CANDIDATE, List.of("hjelseth.com")),
+            new ProviderDefinition("Upheads", ProviderRole.MSP_CANDIDATE, List.of("upheads.no", "upheads.com", "upheads.org")),
+            new ProviderDefinition("ITsjefen", ProviderRole.MSP_CANDIDATE, List.of("itsjefen.net")),
+            new ProviderDefinition("Intility", ProviderRole.MSP_CANDIDATE, List.of("intility.com")),
+            new ProviderDefinition("Netpower", ProviderRole.MSP_CANDIDATE, List.of("netpower.no")),
+            new ProviderDefinition("ECIT", ProviderRole.MSP_CANDIDATE, List.of("ecitinfra.no", "ecit.com")),
+            new ProviderDefinition("Telenor", ProviderRole.CONNECTIVITY_PROVIDER, List.of("telenor.net", "online.no")),
+            new ProviderDefinition("Altibox", ProviderRole.CONNECTIVITY_PROVIDER, List.of("altibox.no")),
+            new ProviderDefinition("GlobalConnect", ProviderRole.CONNECTIVITY_PROVIDER, List.of("globalconnect.no", "broadnet.no")),
+            new ProviderDefinition("Domeneshop", ProviderRole.DNS_PROVIDER, List.of("hyp.net", "domeneshop.no")),
+            new ProviderDefinition("one.com", ProviderRole.DNS_PROVIDER, List.of("brand.one.com"))
     );
 
     public List<CompanyCandidate> enrich(List<CompanyCandidate> candidates) {
@@ -53,7 +54,6 @@ public class TechnologyAnalysisService {
 
         List<String> mx = lower(dns.mxRecords());
         List<String> spf = lower(dns.spfRecords());
-        List<String> ns = lower(dns.nameServers());
         List<String> evidence = new ArrayList<>();
 
         EmailGateway gateway = detectGateway(mx);
@@ -72,6 +72,9 @@ public class TechnologyAnalysisService {
 
         DmarcPosture dmarcPosture = detectDmarc(dns);
         SpfResult spfResult = detectSpf(dns);
+        if (spfResult.redirectTarget() != null) {
+            evidence.add("SPF delegerer policy med redirect=" + spfResult.redirectTarget());
+        }
         List<ProviderSignal> providerSignals = detectProviders(dns);
 
         return new TechnologyObservation(
@@ -82,6 +85,7 @@ public class TechnologyAnalysisService {
                 dmarcPosture,
                 spfResult.posture(),
                 spfResult.allMechanism(),
+                spfResult.redirectTarget(),
                 spfResult.signals(),
                 providerSignals,
                 evidence
@@ -177,7 +181,7 @@ public class TechnologyAnalysisService {
             SpfPosture posture = queryFailed(dns, "TXT for " + dns.domain())
                     ? SpfPosture.UNKNOWN
                     : SpfPosture.MISSING;
-            return new SpfResult(posture, null, List.of());
+            return new SpfResult(posture, null, null, List.of());
         }
 
         Set<String> signals = new LinkedHashSet<>();
@@ -204,18 +208,30 @@ public class TechnologyAnalysisService {
         }
 
         String allMechanism = findAllMechanism(records.getFirst());
-        if (records.size() > 1) {
-            return new SpfResult(SpfPosture.MULTIPLE, allMechanism, List.copyOf(signals));
+        String redirectTarget = findRedirectTarget(records.getFirst());
+        if (redirectTarget != null) {
+            signals.add("SPF redirect: " + redirectTarget);
         }
 
-        SpfPosture posture = switch (allMechanism == null ? "" : allMechanism) {
-            case "-all" -> SpfPosture.HARD_FAIL;
-            case "~all" -> SpfPosture.SOFT_FAIL;
-            case "?all" -> SpfPosture.NEUTRAL;
-            case "+all", "all" -> SpfPosture.PASS_ALL;
-            default -> SpfPosture.PRESENT;
-        };
-        return new SpfResult(posture, allMechanism, List.copyOf(signals));
+        if (records.size() > 1) {
+            return new SpfResult(SpfPosture.MULTIPLE, allMechanism, redirectTarget, List.copyOf(signals));
+        }
+
+        SpfPosture posture;
+        if (allMechanism != null) {
+            posture = switch (allMechanism) {
+                case "-all" -> SpfPosture.HARD_FAIL;
+                case "~all" -> SpfPosture.SOFT_FAIL;
+                case "?all" -> SpfPosture.NEUTRAL;
+                case "+all", "all" -> SpfPosture.PASS_ALL;
+                default -> SpfPosture.PRESENT;
+            };
+        } else if (redirectTarget != null) {
+            posture = SpfPosture.REDIRECTED;
+        } else {
+            posture = SpfPosture.PRESENT;
+        }
+        return new SpfResult(posture, allMechanism, redirectTarget, List.copyOf(signals));
     }
 
     private String findAllMechanism(String record) {
@@ -231,10 +247,18 @@ public class TechnologyAnalysisService {
         return last;
     }
 
+    private String findRedirectTarget(String record) {
+        if (record == null) {
+            return null;
+        }
+        Matcher matcher = SPF_REDIRECT.matcher(record);
+        return matcher.find() ? matcher.group(1).trim().toLowerCase(Locale.ROOT) : null;
+    }
+
     private List<ProviderSignal> detectProviders(DnsObservation dns) {
         Map<String, ProviderAccumulator> accumulators = new LinkedHashMap<>();
         for (ProviderDefinition definition : PROVIDERS) {
-            ProviderAccumulator accumulator = new ProviderAccumulator(definition.name());
+            ProviderAccumulator accumulator = new ProviderAccumulator(definition.name(), definition.role());
             collectMatches(accumulator, SignalSource.MX, dns.mxRecords(), definition.patterns());
             collectMatches(accumulator, SignalSource.SPF, dns.spfRecords(), definition.patterns());
             collectMatches(accumulator, SignalSource.NS, dns.nameServers(), definition.patterns());
@@ -246,7 +270,8 @@ public class TechnologyAnalysisService {
         return accumulators.values().stream()
                 .map(ProviderAccumulator::toSignal)
                 .sorted(Comparator
-                        .comparing((ProviderSignal signal) -> signal.confidence() == SignalConfidence.HIGH ? 0 : 1)
+                        .comparingInt((ProviderSignal signal) -> signal.role().getSortOrder())
+                        .thenComparing(signal -> signal.confidence() == SignalConfidence.HIGH ? 0 : 1)
                         .thenComparing(ProviderSignal::provider, String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }
@@ -314,20 +339,27 @@ public class TechnologyAnalysisService {
     private record SpfResult(
             SpfPosture posture,
             String allMechanism,
+            String redirectTarget,
             List<String> signals
     ) {
     }
 
-    private record ProviderDefinition(String name, List<String> patterns) {
+    private record ProviderDefinition(
+            String name,
+            ProviderRole role,
+            List<String> patterns
+    ) {
     }
 
     private static final class ProviderAccumulator {
         private final String provider;
+        private final ProviderRole role;
         private final Set<SignalSource> sources = EnumSet.noneOf(SignalSource.class);
         private final Set<String> evidence = new LinkedHashSet<>();
 
-        private ProviderAccumulator(String provider) {
+        private ProviderAccumulator(String provider, ProviderRole role) {
             this.provider = provider;
+            this.role = role;
         }
 
         private ProviderSignal toSignal() {
@@ -336,6 +368,7 @@ public class TechnologyAnalysisService {
                     : SignalConfidence.MEDIUM;
             return new ProviderSignal(
                     provider,
+                    role,
                     List.copyOf(sources),
                     confidence,
                     List.copyOf(evidence)
