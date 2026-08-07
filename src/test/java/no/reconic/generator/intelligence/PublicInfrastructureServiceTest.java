@@ -9,23 +9,69 @@ import static org.junit.jupiter.api.Assertions.*;
 class PublicInfrastructureServiceTest {
 
     @Test
-    void parsesNoridDnssecAndEvents() {
+    void parsesDnssecPresentFromDoh() {
         String json = """
                 {
-                  "secureDNS": {"delegationSigned": true},
-                  "events": [
-                    {"eventAction":"registration","eventDate":"2020-01-02T10:00:00Z"},
-                    {"eventAction":"last changed","eventDate":"2026-07-01T12:30:00Z"}
+                  "Status": 0,
+                  "AD": true,
+                  "Answer": [
+                    {
+                      "name": "example.no.",
+                      "type": 43,
+                      "TTL": 3600,
+                      "data": "12345 13 2 ABCDEF0123456789"
+                    }
                   ]
                 }
                 """;
 
-        var result = PublicInfrastructureService.parseNoridRdap(json);
+        var result = PublicInfrastructureService.parseDnssecDoh(json);
 
         assertEquals(PublicSignalStatus.PRESENT, result.status());
-        assertEquals(Boolean.TRUE, result.dnssec());
-        assertEquals("2020-01-02T10:00:00Z", result.createdAt());
-        assertEquals("2026-07-01T12:30:00Z", result.updatedAt());
+        assertEquals(Boolean.TRUE, result.authenticatedData());
+        assertEquals(1, result.dsRecords().size());
+        assertTrue(result.dsRecords().getFirst().startsWith("12345 13 2"));
+    }
+
+    @Test
+    void parsesDnssecMissingFromSuccessfulDohResponse() {
+        String json = """
+                {
+                  "Status": 0,
+                  "AD": true,
+                  "Authority": [
+                    {"name":"no.","type":6,"TTL":900,"data":"example"}
+                  ]
+                }
+                """;
+
+        var result = PublicInfrastructureService.parseDnssecDoh(json);
+
+        assertEquals(PublicSignalStatus.MISSING, result.status());
+        assertTrue(result.dsRecords().isEmpty());
+    }
+
+    @Test
+    void parsesNxdomainAsMissingDnssec() {
+        String json = """
+                {"Status":3,"AD":true}
+                """;
+
+        var result = PublicInfrastructureService.parseDnssecDoh(json);
+
+        assertEquals(PublicSignalStatus.MISSING, result.status());
+    }
+
+    @Test
+    void parsesServerFailureAsUnknownDnssec() {
+        String json = """
+                {"Status":2,"AD":false}
+                """;
+
+        var result = PublicInfrastructureService.parseDnssecDoh(json);
+
+        assertEquals(PublicSignalStatus.UNKNOWN, result.status());
+        assertEquals(Boolean.FALSE, result.authenticatedData());
     }
 
     @Test
@@ -54,7 +100,10 @@ class PublicInfrastructureServiceTest {
         }
         json.append("]");
 
-        List<String> names = PublicInfrastructureService.parseCertificateNames(json.toString(), "example.no");
+        List<String> names = PublicInfrastructureService.parseCertificateNames(
+                json.toString(),
+                "example.no"
+        );
 
         assertTrue(names.size() <= 25);
     }
