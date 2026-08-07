@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic – Lead Explorer 0.7</title>
+    <title>Reconic – Lead Dossier 0.8</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
     <link rel="stylesheet" th:href="@{/css/lead-explorer.css}">
     <script th:src="@{/js/lead-explorer.js}" defer></script>
@@ -12,13 +12,13 @@
 <header class="topbar">
     <div class="shell topbar-inner">
         <a class="brand" th:href="@{/}">Reconic</a>
-        <span class="phase">Lead Explorer 0.7</span>
+        <span class="phase">Lead Dossier 0.8</span>
     </div>
 </header>
 
 <main class="shell page">
     <section class="hero">
-        <p class="eyebrow">Lead intelligence 0.7</p>
+        <p class="eyebrow">Lead intelligence 0.8</p>
         <h1>Finn ringelisten – ikke bare en score</h1>
         <p class="intro">
             Hent markedet én gang, og filtrer deretter lokalt på størrelse, bransje, e-postoppsett,
@@ -117,7 +117,8 @@
                     <span>kandidater</span>
                 </h2>
                 <p class="muted">
-                    Filtrene under endrer listen umiddelbart. Ingen nye Brønnøysund- eller DNS-oppslag kjøres.
+                    Filtrene under endrer listen umiddelbart. Åpne en lead som dossier for å få hele
+                    cold-call-grunnlaget samlet på ett sted.
                 </p>
             </div>
             <span class="timestamp" th:text="${result.generatedAtDisplay()}">07.08.2026</span>
@@ -167,7 +168,7 @@
                         Forslag: e-postpolicy
                     </button>
                     <button type="button" class="primary-button explorer-button" id="presetRingReady">
-                        Forslag: ringeklar
+                        Forslag: ringeklar 30M+
                     </button>
                     <button type="button" class="secondary-button explorer-button" id="clearExplorerFilters">
                         Nullstill
@@ -382,7 +383,7 @@
                     <th>Leverandørsignal</th>
                     <th>Økonomi</th>
                     <th>Opportunity</th>
-                    <th>Analyse</th>
+                    <th>Dossier</th>
                 </tr>
                 </thead>
                 <tbody id="leadExplorerBody">
@@ -570,171 +571,442 @@
                     </td>
 
                     <td class="analysis-cell">
-                        <details class="raw-details">
-                            <summary>Åpne</summary>
-                            <div class="detail-grid score-detail-grid">
-                                <div>
-                                    <strong>Kontakt</strong>
-                                    <span th:text="${candidate.address ?: 'Adresse ikke tilgjengelig'}">Adresse</span>
-                                    <span th:text="${candidate.email ?: 'E-post ikke tilgjengelig'}">E-post</span>
-                                    <span th:text="${candidate.phone ?: 'Telefon ikke tilgjengelig'}">Telefon</span>
+                        <button type="button"
+                                class="secondary-button dossier-open-button"
+                                data-open-dossier>
+                            Åpne dossier
+                        </button>
+
+                        <template class="lead-dossier-template">
+                            <article class="dossier-content">
+                                <header class="dossier-hero">
+                                    <div>
+                                        <p class="section-kicker">Lead dossier</p>
+                                        <h2 class="dossier-company-name" th:text="${candidate.name}">Firma AS</h2>
+                                        <p class="dossier-meta"
+                                           th:text="${candidate.organizationNumber + ' · '
+                                           + candidate.employees + ' ansatte · '
+                                           + candidate.segment.displayName + ' · '
+                                           + (candidate.municipalityName ?: 'Ukjent kommune')}">
+                                            999999999 · 50 ansatte · Industri · Sandnes
+                                        </p>
+                                    </div>
+
+                                    <div class="dossier-score-block">
+                                        <div class="score-ring"
+                                             th:classappend="${candidate.opportunityAssessment.priority.cssClass}">
+                                            <strong th:text="${candidate.opportunityAssessment.opportunityScore}">66</strong>
+                                            <span>/100</span>
+                                        </div>
+                                        <span class="priority-badge"
+                                              th:classappend="${candidate.opportunityAssessment.priority.cssClass}"
+                                              th:text="${candidate.opportunityAssessment.priority.displayName}">
+                                            Høy
+                                        </span>
+                                        <small th:text="${'Datatillit '
+                                        + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">
+                                            Datatillit
+                                        </small>
+                                    </div>
+                                </header>
+
+                                <section class="dossier-call-brief">
+                                    <div class="dossier-section-heading">
+                                        <div>
+                                            <p class="section-kicker">Cold-call brief</p>
+                                            <h3>Hvorfor undersøke denne bedriften?</h3>
+                                        </div>
+                                    </div>
+
+                                    <div class="dossier-call-grid">
+                                        <div class="dossier-reason-card">
+                                            <strong>Salgsgrunner</strong>
+                                            <ul class="reason-list">
+                                                <li th:each="reason : ${candidate.opportunityAssessment.reasonsToContact}"
+                                                    th:text="${reason}">
+                                                    Grunn
+                                                </li>
+                                            </ul>
+                                        </div>
+
+                                        <div class="dossier-reason-card"
+                                             th:if="${candidate.opportunityAssessment.hasWarnings()}">
+                                            <strong>Usikkerhet før du ringer</strong>
+                                            <ul class="warning-list">
+                                                <li th:each="warning : ${candidate.opportunityAssessment.uncertaintyWarnings}"
+                                                    th:text="${warning}">
+                                                    Advarsel
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div class="dossier-grid">
+                                    <section class="dossier-card">
+                                        <p class="section-kicker">Kontakt</p>
+                                        <h3>Kontaktgrunnlag</h3>
+
+                                        <dl class="dossier-facts">
+                                            <div>
+                                                <dt>Telefon</dt>
+                                                <dd>
+                                                    <a th:if="${candidate.phone != null && !candidate.phone.isBlank()}"
+                                                       th:href="${'tel:' + candidate.phone}"
+                                                       th:text="${candidate.phone}">
+                                                        51 00 00 00
+                                                    </a>
+                                                    <span th:unless="${candidate.phone != null && !candidate.phone.isBlank()}">–</span>
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt>E-post</dt>
+                                                <dd>
+                                                    <a th:if="${candidate.email != null && !candidate.email.isBlank()}"
+                                                       th:href="${'mailto:' + candidate.email}"
+                                                       th:text="${candidate.email}">
+                                                        post@example.no
+                                                    </a>
+                                                    <span th:unless="${candidate.email != null && !candidate.email.isBlank()}">–</span>
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt>Domene</dt>
+                                                <dd>
+                                                    <a th:if="${candidate.domainCandidate.hasDomain()}"
+                                                       th:href="${candidate.domainCandidate.url()}"
+                                                       target="_blank"
+                                                       rel="noopener noreferrer"
+                                                       th:text="${candidate.domainCandidate.domain}">
+                                                        example.no
+                                                    </a>
+                                                    <span th:unless="${candidate.domainCandidate.hasDomain()}">–</span>
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt>Adresse</dt>
+                                                <dd th:text="${candidate.address ?: '–'}">Adresse</dd>
+                                            </div>
+                                            <div>
+                                                <dt>NACE</dt>
+                                                <dd th:text="${candidate.naceDisplay() ?: '–'}">NACE</dd>
+                                            </div>
+                                        </dl>
+                                    </section>
+
+                                    <section class="dossier-card">
+                                        <p class="section-kicker">Økonomi</p>
+                                        <h3>Betalingsevne / størrelse</h3>
+
+                                        <div th:if="${candidate.financialObservation.hasData()}">
+                                            <dl class="dossier-facts">
+                                                <div>
+                                                    <dt>Omsetning</dt>
+                                                    <dd th:text="${candidate.financialObservation.operatingRevenueDisplay()}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Driftsresultat</dt>
+                                                    <dd th:text="${candidate.financialObservation.operatingResultDisplay()}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Driftsmargin</dt>
+                                                    <dd th:text="${candidate.financialObservation.operatingMarginDisplay()}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Årsresultat</dt>
+                                                    <dd th:text="${candidate.financialObservation.annualResultDisplay()}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Egenkapital</dt>
+                                                    <dd th:text="${candidate.financialObservation.equityDisplay()}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>EK-andel</dt>
+                                                    <dd th:text="${candidate.financialObservation.equityRatioDisplay()}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Gjeld</dt>
+                                                    <dd th:text="${candidate.financialObservation.debtDisplay()}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Omsetning / ansatt</dt>
+                                                    <dd th:text="${candidate.financialObservation.revenuePerEmployeeDisplay(candidate.employees)}">–</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Regnskapsår</dt>
+                                                    <dd th:text="${candidate.financialObservation.fiscalYear ?: '–'}">2025</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Kilde</dt>
+                                                    <dd th:text="${candidate.financialObservation.sourceDisplay()}">Regnskapsregisteret</dd>
+                                                </div>
+                                            </dl>
+
+                                            <div class="dossier-signal-row">
+                                                <span class="finance-badge positive"
+                                                      th:if="${candidate.financialObservation.hasPositiveOperatingResult()}">
+                                                    Positiv drift
+                                                </span>
+                                                <span class="finance-badge negative"
+                                                      th:if="${candidate.financialObservation.hasNegativeOperatingResult()}">
+                                                    Negativ drift
+                                                </span>
+                                            </div>
+
+                                            <p class="dossier-note"
+                                               th:if="${candidate.financialObservation.sourceIsParent}">
+                                                Regnskapet tilhører juridisk hovedenhet, ikke bare denne underenheten.
+                                            </p>
+                                        </div>
+
+                                        <p class="muted"
+                                           th:unless="${candidate.financialObservation.hasData()}"
+                                           th:text="${candidate.financialObservation.status.displayName
+                                           + (candidate.financialObservation.warning != null
+                                           ? ': ' + candidate.financialObservation.warning : '')}">
+                                            Ingen regnskapsdata
+                                        </p>
+                                    </section>
+
+                                    <section class="dossier-card">
+                                        <p class="section-kicker">E-post / sikkerhet</p>
+                                        <h3>Observerbar konfigurasjon</h3>
+
+                                        <dl class="dossier-facts">
+                                            <div>
+                                                <dt>Plattform</dt>
+                                                <dd th:text="${candidate.technologyObservation.emailPlatform.displayName}">Microsoft 365</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Gateway</dt>
+                                                <dd th:text="${candidate.technologyObservation.emailGateway.displayName}">Ingen</dd>
+                                            </div>
+                                            <div>
+                                                <dt>DMARC</dt>
+                                                <dd th:text="${candidate.technologyObservation.dmarcPosture.displayName}">Mangler</dd>
+                                            </div>
+                                            <div>
+                                                <dt>SPF</dt>
+                                                <dd th:text="${candidate.technologyObservation.spfPosture.displayName}">Softfail</dd>
+                                            </div>
+                                            <div>
+                                                <dt>DNSSEC</dt>
+                                                <dd th:text="${candidate.technologyObservation.publicInfrastructure.dnssecStatus.displayName}">Funnet</dd>
+                                            </div>
+                                            <div>
+                                                <dt>MTA-STS</dt>
+                                                <dd th:text="${candidate.technologyObservation.publicInfrastructure.mtaStsStatus.displayName}">Ikke funnet</dd>
+                                            </div>
+                                            <div>
+                                                <dt>TLS-RPT</dt>
+                                                <dd th:text="${candidate.technologyObservation.publicInfrastructure.tlsRptStatus.displayName}">Ikke funnet</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Autodiscover</dt>
+                                                <dd th:text="${candidate.technologyObservation.publicInfrastructure.autodiscoverTarget ?: '–'}">–</dd>
+                                            </div>
+                                        </dl>
+
+                                        <p class="dossier-note">
+                                            Dette er offentlige tekniske signaler, ikke en full sikkerhetsvurdering.
+                                        </p>
+                                    </section>
+
+                                    <section class="dossier-card">
+                                        <p class="section-kicker">Leverandørbildet</p>
+                                        <h3>Mulige leverandørsignaler</h3>
+
+                                        <div class="dossier-provider-list"
+                                             th:if="${candidate.technologyObservation.hasProviderSignals()}">
+                                            <article class="dossier-provider-item"
+                                                     th:each="providerSignal : ${candidate.technologyObservation.providerSignals}">
+                                                <div>
+                                                    <strong th:text="${providerSignal.provider}">Provider</strong>
+                                                    <span class="provider-role"
+                                                          th:classappend="${providerSignal.role.cssClass}"
+                                                          th:text="${providerSignal.role.displayName}">
+                                                        Rolle
+                                                    </span>
+                                                </div>
+                                                <small th:text="${'Konfidens: ' + providerSignal.confidence.displayName
+                                                + ' · kilder: ' + providerSignal.sourcesDisplay()}">
+                                                    Konfidens
+                                                </small>
+                                                <p th:text="${providerSignal.evidenceDisplay()}">Evidence</p>
+                                            </article>
+                                        </div>
+
+                                        <p class="muted"
+                                           th:unless="${candidate.technologyObservation.hasProviderSignals()}">
+                                            Ingen kjent leverandørsignatur.
+                                        </p>
+
+                                        <p class="dossier-note">
+                                            Signaler beskriver mulig rolle/evidence – ikke et bekreftet kundeforhold.
+                                        </p>
+                                    </section>
+
+                                    <section class="dossier-card">
+                                        <p class="section-kicker">Domene</p>
+                                        <h3>Datakvalitet</h3>
+
+                                        <dl class="dossier-facts">
+                                            <div>
+                                                <dt>Funnet domene</dt>
+                                                <dd th:text="${candidate.domainCandidate.domain ?: '–'}">example.no</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Kilde</dt>
+                                                <dd th:text="${candidate.domainCandidate.source.displayName}">Nettside</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Tillit</dt>
+                                                <dd th:text="${candidate.domainCandidate.confidence.displayName}">Høy</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Delt domene</dt>
+                                                <dd th:text="${candidate.opportunityAssessment.sharedDomain
+                                                ? 'Ja – ' + candidate.opportunityAssessment.sharedDomainCount + ' kandidater'
+                                                : 'Nei'}">
+                                                    Nei
+                                                </dd>
+                                            </div>
+                                        </dl>
+
+                                        <p class="dossier-note"
+                                           th:text="${candidate.domainCandidate.explanation}">
+                                            Domenegrunnlag
+                                        </p>
+
+                                        <p class="dossier-note warning"
+                                           th:if="${candidate.opportunityAssessment.priorityCapped}"
+                                           th:text="${candidate.opportunityAssessment.priorityExplanation}">
+                                            Domenet krever verifisering
+                                        </p>
+                                    </section>
+
+                                    <section class="dossier-card">
+                                        <p class="section-kicker">Opportunity</p>
+                                        <h3>Hvor scoren kommer fra</h3>
+
+                                        <dl class="dossier-facts">
+                                            <div>
+                                                <dt>Opportunity</dt>
+                                                <dd th:text="${candidate.opportunityAssessment.opportunityScore + '/100'}">66/100</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Prioritet</dt>
+                                                <dd th:text="${candidate.opportunityAssessment.priority.displayName}">Høy</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Datatillit</dt>
+                                                <dd th:text="${candidate.opportunityAssessment.dataConfidenceScore + '/100'}">95/100</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Fordeling</dt>
+                                                <dd th:text="${candidate.opportunityAssessment.scoreBreakdownDisplay()}">Fordeling</dd>
+                                            </div>
+                                        </dl>
+
+                                        <p class="dossier-note">
+                                            Opportunity er salgsrelevans, ikke en sikkerhetskarakter.
+                                        </p>
+                                    </section>
                                 </div>
 
-                                <div>
-                                    <strong>Økonomi</strong>
-                                    <span th:text="${'Status: ' + candidate.financialObservation.status.displayName}">
-                                        Status
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.hasData()}"
-                                          th:text="${'Omsetning: ' + candidate.financialObservation.operatingRevenueDisplay()}">
-                                        Omsetning
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.hasData()}"
-                                          th:text="${'Driftsresultat: ' + candidate.financialObservation.operatingResultDisplay()
-                                          + ' (' + candidate.financialObservation.operatingMarginDisplay() + ')'}">
-                                        Driftsresultat
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.hasData()}"
-                                          th:text="${'Resultat før skatt: ' + candidate.financialObservation.preTaxResultDisplay()}">
-                                        Resultat før skatt
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.hasData()}"
-                                          th:text="${'Årsresultat: ' + candidate.financialObservation.annualResultDisplay()}">
-                                        Årsresultat
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.hasData()}"
-                                          th:text="${'Egenkapital: ' + candidate.financialObservation.equityDisplay()
-                                          + ' · EK-andel ' + candidate.financialObservation.equityRatioDisplay()}">
-                                        Egenkapital
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.hasData()}"
-                                          th:text="${'Gjeld: ' + candidate.financialObservation.debtDisplay()}">
-                                        Gjeld
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.hasData()}"
-                                          th:text="${'Omsetning per ansatt: '
-                                          + candidate.financialObservation.revenuePerEmployeeDisplay(candidate.employees)}">
-                                        Omsetning per ansatt
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.sourceIsParent}">
-                                        Regnskapet tilhører juridisk hovedenhet, ikke underenheten alene.
-                                    </span>
-                                    <span th:if="${candidate.financialObservation.warning != null}"
-                                          th:text="${candidate.financialObservation.warning}">
-                                        Regnskapsmerknad
-                                    </span>
-                                </div>
+                                <details class="dossier-raw">
+                                    <summary>Vis rå tekniske observasjoner</summary>
 
-                                <div class="score-breakdown">
-                                    <strong>Scorefordeling</strong>
-                                    <span th:text="${candidate.opportunityAssessment.scoreBreakdownDisplay()}">Fordeling</span>
-                                    <span th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">
-                                        Datatillit
-                                    </span>
-                                    <span class="calibration-note"
-                                          th:if="${candidate.opportunityAssessment.priorityCapped}"
-                                          th:text="${candidate.opportunityAssessment.priorityExplanation}">
-                                        Prioriteten er kalibrert.
-                                    </span>
-                                </div>
+                                    <div class="dossier-raw-grid">
+                                        <div>
+                                            <strong>MX</strong>
+                                            <pre th:text="${candidate.dnsObservation.mxDisplay()}">MX</pre>
+                                        </div>
+                                        <div>
+                                            <strong>SPF</strong>
+                                            <pre th:text="${candidate.dnsObservation.spfDisplay()}">SPF</pre>
+                                        </div>
+                                        <div>
+                                            <strong>DMARC</strong>
+                                            <pre th:text="${candidate.dnsObservation.dmarcRecord ?: 'Ikke funnet'}">DMARC</pre>
+                                        </div>
+                                        <div>
+                                            <strong>Navneservere</strong>
+                                            <pre th:text="${candidate.dnsObservation.nameServersDisplay()}">NS</pre>
+                                        </div>
+                                        <div>
+                                            <strong>DNS-status</strong>
+                                            <pre th:text="${candidate.dnsObservation.status.displayName
+                                            + (candidate.dnsObservation.hasErrors()
+                                            ? ' · ' + candidate.dnsObservation.errorsDisplay() : '')}">
+                                                DNS
+                                            </pre>
+                                        </div>
+                                        <div>
+                                            <strong>Public intelligence</strong>
+                                            <pre th:text="${candidate.technologyObservation.publicInfrastructure.evidenceDisplay()}">
+                                                Public evidence
+                                            </pre>
+                                        </div>
+                                    </div>
+                                </details>
 
-                                <div>
-                                    <strong>Hvorfor undersøke</strong>
-                                    <ul class="reason-list">
+                                <div class="dossier-clipboard-source" hidden>
+                                    <span data-brief="company" th:text="${candidate.name}">Firma AS</span>
+                                    <span data-brief="orgnr" th:text="${candidate.organizationNumber}">999999999</span>
+                                    <span data-brief="employees" th:text="${candidate.employees}">50</span>
+                                    <span data-brief="segment" th:text="${candidate.segment.displayName}">Industri</span>
+                                    <span data-brief="municipality" th:text="${candidate.municipalityName ?: ''}">Sandnes</span>
+                                    <span data-brief="phone" th:text="${candidate.phone ?: ''}"></span>
+                                    <span data-brief="email" th:text="${candidate.email ?: ''}"></span>
+                                    <span data-brief="domain" th:text="${candidate.domainCandidate.domain ?: ''}"></span>
+                                    <span data-brief="platform" th:text="${candidate.technologyObservation.emailPlatform.displayName}"></span>
+                                    <span data-brief="dmarc" th:text="${candidate.technologyObservation.dmarcPosture.displayName}"></span>
+                                    <span data-brief="spf" th:text="${candidate.technologyObservation.spfPosture.displayName}"></span>
+                                    <span data-brief="provider" th:text="${candidate.technologyObservation.primaryProviderSignal() != null
+                                    ? candidate.technologyObservation.primaryProviderSignal().provider : 'Ingen kjent signatur'}"></span>
+                                    <span data-brief="revenue" th:text="${candidate.financialObservation.operatingRevenueDisplay()}"></span>
+                                    <span data-brief="operatingResult" th:text="${candidate.financialObservation.operatingResultDisplay()}"></span>
+                                    <span data-brief="margin" th:text="${candidate.financialObservation.operatingMarginDisplay()}"></span>
+                                    <span data-brief="opportunity" th:text="${candidate.opportunityAssessment.opportunityScore}"></span>
+                                    <span data-brief="priority" th:text="${candidate.opportunityAssessment.priority.displayName}"></span>
+                                    <ul data-brief="reasons">
                                         <li th:each="reason : ${candidate.opportunityAssessment.reasonsToContact}"
                                             th:text="${reason}">Grunn</li>
                                     </ul>
                                 </div>
-
-                                <div th:if="${candidate.opportunityAssessment.hasWarnings()}">
-                                    <strong>Usikkerhet</strong>
-                                    <ul class="warning-list">
-                                        <li th:each="warning : ${candidate.opportunityAssessment.uncertaintyWarnings}"
-                                            th:text="${warning}">Advarsel</li>
-                                    </ul>
-                                </div>
-
-                                <div>
-                                    <strong>Domenegrunnlag</strong>
-                                    <span th:text="${candidate.domainCandidate.explanation}">Forklaring</span>
-                                    <span th:if="${candidate.opportunityAssessment.sharedDomain}"
-                                          th:text="${'Domenet deles av ' + candidate.opportunityAssessment.sharedDomainCount
-                                          + ' kandidater i dette søket.'}">
-                                        Delt domene
-                                    </span>
-                                </div>
-
-                                <div>
-                                    <strong>MX</strong>
-                                    <span th:text="${candidate.dnsObservation.mxDisplay()}">MX</span>
-                                </div>
-
-                                <div>
-                                    <strong>SPF</strong>
-                                    <span th:text="${candidate.dnsObservation.spfDisplay()}">SPF</span>
-                                    <span th:if="${candidate.technologyObservation.spfRedirectTarget != null}"
-                                          th:text="${'Redirect: ' + candidate.technologyObservation.spfRedirectTarget}">
-                                        Redirect
-                                    </span>
-                                </div>
-
-                                <div>
-                                    <strong>DMARC</strong>
-                                    <span th:text="${candidate.dnsObservation.dmarcRecord ?: 'Ikke funnet'}">DMARC</span>
-                                </div>
-
-                                <div>
-                                    <strong>Navneservere</strong>
-                                    <span th:text="${candidate.dnsObservation.nameServersDisplay()}">NS</span>
-                                </div>
-
-                                <div>
-                                    <strong>Passiv infrastruktur</strong>
-                                    <span th:text="${'DNSSEC: ' + candidate.technologyObservation.publicInfrastructure.dnssecStatus.displayName}">
-                                        DNSSEC
-                                    </span>
-                                    <span th:text="${'MTA-STS: ' + candidate.technologyObservation.publicInfrastructure.mtaStsStatus.displayName}">
-                                        MTA-STS
-                                    </span>
-                                    <span th:text="${'TLS-RPT: ' + candidate.technologyObservation.publicInfrastructure.tlsRptStatus.displayName}">
-                                        TLS-RPT
-                                    </span>
-                                    <span th:if="${candidate.technologyObservation.publicInfrastructure.hasAutodiscover()}"
-                                          th:text="${'Autodiscover: ' + candidate.technologyObservation.publicInfrastructure.autodiscoverTarget}">
-                                        Autodiscover
-                                    </span>
-                                </div>
-
-                                <div th:if="${candidate.technologyObservation.hasProviderSignals()}">
-                                    <strong>Alle leverandørsignaler</strong>
-                                    <span class="provider-detail"
-                                          th:each="providerSignal : ${candidate.technologyObservation.providerSignals}">
-                                        <b th:text="${providerSignal.provider + ' – ' + providerSignal.role.displayName + ': '}">
-                                            Leverandør:
-                                        </b>
-                                        <span th:text="${providerSignal.evidenceDisplay()}">NS: ns1...</span>
-                                    </span>
-                                </div>
-
-                                <div>
-                                    <strong>DNS-status</strong>
-                                    <span th:text="${candidate.dnsObservation.status.displayName}">Fullført</span>
-                                    <span class="error-text"
-                                          th:if="${candidate.dnsObservation.hasErrors()}"
-                                          th:text="${candidate.dnsObservation.errorsDisplay()}">Feil</span>
-                                    <span class="error-text"
-                                          th:if="${!candidate.technologyObservation.publicInfrastructure.lookupWarnings.isEmpty()}"
-                                          th:text="${candidate.technologyObservation.publicInfrastructure.warningsDisplay()}">
-                                        Offentlig oppslagsfeil
-                                    </span>
-                                </div>
-                            </div>
-                        </details>
+                            </article>
+                        </template>
                     </td>
                 </tr>
                 </tbody>
             </table>
         </div>
+
+        <dialog class="lead-dossier-dialog" id="leadDossierDialog">
+            <div class="dossier-shell">
+                <div class="dossier-top-actions">
+                    <div class="dossier-top-actions-left">
+                        <span class="phase">Lead dossier 0.8</span>
+                    </div>
+
+                    <div class="dossier-top-actions-right">
+                        <button type="button"
+                                class="secondary-button dossier-action-button"
+                                id="copyDossierBrief">
+                            Kopier call brief
+                        </button>
+                        <button type="button"
+                                class="secondary-button dossier-action-button"
+                                id="closeLeadDossier">
+                            Lukk
+                        </button>
+                    </div>
+                </div>
+
+                <div id="leadDossierContent"></div>
+            </div>
+        </dialog>
 
         <div class="explorer-empty-filtered" id="explorerEmptyFiltered" hidden>
             Ingen kandidater matcher filtrene. Fjern ett eller flere filtre og prøv igjen.

@@ -55,7 +55,11 @@
         clear: document.getElementById("clearExplorerFilters"),
         coldCallPreset: document.getElementById("presetColdCall"),
         ringReadyPreset: document.getElementById("presetRingReady"),
-        exportFiltered: document.getElementById("exportFilteredCsv")
+        exportFiltered: document.getElementById("exportFilteredCsv"),
+        dossierDialog: document.getElementById("leadDossierDialog"),
+        dossierContent: document.getElementById("leadDossierContent"),
+        dossierClose: document.getElementById("closeLeadDossier"),
+        dossierCopyBrief: document.getElementById("copyDossierBrief")
     };
 
     let currentPage = 1;
@@ -466,6 +470,7 @@
         if (els.requireFinancials) els.requireFinancials.checked = true;
         if (els.domainConfidence) els.domainConfidence.value = "HIGH";
         if (els.profitability) els.profitability.value = "POSITIVE";
+        if (els.revenueMin) els.revenueMin.value = "30";
 
         setChecked("dmarc", ["MISSING", "MONITORING"]);
         setChecked("spf", ["MISSING", "SOFT_FAIL", "MULTIPLE"]);
@@ -583,6 +588,114 @@
             .replaceAll("'", "&#039;");
     }
 
+    function openDossier(row) {
+        if (!row || !els.dossierDialog || !els.dossierContent) {
+            return;
+        }
+
+        const template = row.querySelector(".lead-dossier-template");
+        if (!template) {
+            return;
+        }
+
+        els.dossierContent.replaceChildren(template.content.cloneNode(true));
+        els.dossierDialog.dataset.sourceOrgnr = row.dataset.orgnr || "";
+
+        if (typeof els.dossierDialog.showModal === "function") {
+            els.dossierDialog.showModal();
+        } else {
+            els.dossierDialog.setAttribute("open", "open");
+        }
+    }
+
+    function closeDossier() {
+        if (!els.dossierDialog) {
+            return;
+        }
+
+        if (typeof els.dossierDialog.close === "function" && els.dossierDialog.open) {
+            els.dossierDialog.close();
+        } else {
+            els.dossierDialog.removeAttribute("open");
+        }
+    }
+
+    function dossierBriefText() {
+        if (!els.dossierContent) {
+            return "";
+        }
+
+        const value = key => {
+            const element = els.dossierContent.querySelector(`[data-brief="${key}"]`);
+            return element?.textContent?.trim() || "";
+        };
+
+        const reasons = Array.from(
+            els.dossierContent.querySelectorAll('[data-brief="reasons"] li')
+        )
+            .map(item => item.textContent?.trim())
+            .filter(Boolean);
+
+        const lines = [
+            `${value("company")} (${value("orgnr")})`,
+            `${value("employees")} ansatte · ${value("segment")} · ${value("municipality")}`,
+            "",
+            "KONTAKT",
+            `Telefon: ${value("phone") || "–"}`,
+            `E-post: ${value("email") || "–"}`,
+            `Domene: ${value("domain") || "–"}`,
+            "",
+            "ØKONOMI",
+            `Omsetning: ${value("revenue") || "–"}`,
+            `Driftsresultat: ${value("operatingResult") || "–"}`,
+            `Driftsmargin: ${value("margin") || "–"}`,
+            "",
+            "IT-SIGNALER",
+            `Plattform: ${value("platform") || "–"}`,
+            `DMARC: ${value("dmarc") || "–"}`,
+            `SPF: ${value("spf") || "–"}`,
+            `Leverandørsignal: ${value("provider") || "–"}`,
+            "",
+            `Reconic: ${value("opportunity") || "–"}/100 · ${value("priority") || "–"}`,
+            "",
+            "HVORFOR UNDERSØKE"
+        ];
+
+        reasons.forEach(reason => lines.push(`- ${reason}`));
+        return lines.join("\n");
+    }
+
+    async function copyDossierBrief() {
+        const text = dossierBriefText();
+        if (!text) {
+            return;
+        }
+
+        let copied = false;
+        try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+        } catch (error) {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.setAttribute("readonly", "readonly");
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.append(textarea);
+            textarea.select();
+            copied = document.execCommand("copy");
+            textarea.remove();
+        }
+
+        if (copied && els.dossierCopyBrief) {
+            const original = els.dossierCopyBrief.textContent;
+            els.dossierCopyBrief.textContent = "Kopiert";
+            window.setTimeout(() => {
+                els.dossierCopyBrief.textContent = original;
+            }, 1400);
+        }
+    }
+
     function bindEvents() {
         const instantControls = [
             els.text, els.employeesMin, els.employeesMax, els.municipality,
@@ -630,6 +743,19 @@
         els.coldCallPreset?.addEventListener("click", applyColdCallPreset);
         els.ringReadyPreset?.addEventListener("click", applyRingReadyPreset);
         els.exportFiltered?.addEventListener("click", exportFilteredCsv);
+
+        rows.forEach(row => {
+            row.querySelector("[data-open-dossier]")?.addEventListener("click", () => openDossier(row));
+        });
+
+        els.dossierClose?.addEventListener("click", closeDossier);
+        els.dossierCopyBrief?.addEventListener("click", copyDossierBrief);
+
+        els.dossierDialog?.addEventListener("click", event => {
+            if (event.target === els.dossierDialog) {
+                closeDossier();
+            }
+        });
     }
 
     populateDynamicFilters();
