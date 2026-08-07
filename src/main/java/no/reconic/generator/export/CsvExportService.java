@@ -3,6 +3,7 @@ package no.reconic.generator.export;
 import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
 import no.reconic.generator.intelligence.ProviderSignal;
+import no.reconic.generator.intelligence.PublicInfrastructureObservation;
 import no.reconic.generator.intelligence.TechnologyObservation;
 import no.reconic.generator.model.CompanyCandidate;
 import no.reconic.generator.model.CompanyDiscoveryResult;
@@ -78,6 +79,20 @@ public class CsvExportService {
                 "providerRoles",
                 "providerEvidence",
                 "technologyEvidence",
+                "mtaStsStatus",
+                "mtaStsRecord",
+                "tlsRptStatus",
+                "tlsRptRecord",
+                "dnssecStatus",
+                "autodiscoverTarget",
+                "noridStatus",
+                "noridDnssec",
+                "noridCreatedAt",
+                "noridUpdatedAt",
+                "certificateTransparencyStatus",
+                "certificateNames",
+                "publicLookupWarnings",
+                "publicInfrastructureEvidence",
                 "opportunityScore",
                 "opportunityPriority",
                 "marketFitScore",
@@ -110,6 +125,9 @@ public class CsvExportService {
             DomainCandidate domain = candidate.domainCandidate();
             DnsObservation dns = candidate.dnsObservation();
             TechnologyObservation technology = candidate.technologyObservation();
+            PublicInfrastructureObservation publicInfra = technology == null
+                    ? PublicInfrastructureObservation.empty()
+                    : technology.publicInfrastructure();
             OpportunityAssessment opportunity = candidate.opportunityAssessment();
 
             appendRow(csv, List.of(
@@ -152,6 +170,20 @@ public class CsvExportService {
                     technology == null ? "" : providerRoles(technology.providerSignals()),
                     technology == null ? "" : technology.providerEvidenceDisplay(),
                     technology == null ? "" : technology.evidenceDisplay(),
+                    publicInfra.mtaStsStatus().getDisplayName(),
+                    value(publicInfra.mtaStsRecord()),
+                    publicInfra.tlsRptStatus().getDisplayName(),
+                    value(publicInfra.tlsRptRecord()),
+                    publicInfra.dnssecStatus().getDisplayName(),
+                    value(publicInfra.autodiscoverTarget()),
+                    publicInfra.noridStatus().getDisplayName(),
+                    publicInfra.noridDnssec() == null ? "" : publicInfra.noridDnssec().toString(),
+                    value(publicInfra.noridCreatedAt()),
+                    value(publicInfra.noridUpdatedAt()),
+                    publicInfra.certificateTransparencyStatus().getDisplayName(),
+                    publicInfra.certificateNamesDisplay(),
+                    publicInfra.warningsDisplay(),
+                    publicInfra.evidenceDisplay(),
                     opportunity == null ? "" : Integer.toString(opportunity.opportunityScore()),
                     opportunity == null ? "" : opportunity.priority().getDisplayName(),
                     opportunity == null ? "" : Integer.toString(opportunity.marketFitScore()),

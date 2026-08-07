@@ -1,5 +1,6 @@
 package no.reconic.generator.intelligence;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public record TechnologyObservation(
@@ -13,8 +14,38 @@ public record TechnologyObservation(
         String spfRedirectTarget,
         List<String> spfSignals,
         List<ProviderSignal> providerSignals,
-        List<String> evidence
+        List<String> evidence,
+        PublicInfrastructureObservation publicInfrastructure
 ) {
+    public TechnologyObservation(
+            EmailPlatform emailPlatform,
+            SignalConfidence emailPlatformConfidence,
+            EmailGateway emailGateway,
+            SignalConfidence emailGatewayConfidence,
+            DmarcPosture dmarcPosture,
+            SpfPosture spfPosture,
+            String spfAllMechanism,
+            String spfRedirectTarget,
+            List<String> spfSignals,
+            List<ProviderSignal> providerSignals,
+            List<String> evidence
+    ) {
+        this(
+                emailPlatform,
+                emailPlatformConfidence,
+                emailGateway,
+                emailGatewayConfidence,
+                dmarcPosture,
+                spfPosture,
+                spfAllMechanism,
+                spfRedirectTarget,
+                spfSignals,
+                providerSignals,
+                evidence,
+                PublicInfrastructureObservation.empty()
+        );
+    }
+
     public TechnologyObservation(
             EmailPlatform emailPlatform,
             SignalConfidence emailPlatformConfidence,
@@ -38,7 +69,8 @@ public record TechnologyObservation(
                 null,
                 spfSignals,
                 providerSignals,
-                evidence
+                evidence,
+                PublicInfrastructureObservation.empty()
         );
     }
 
@@ -54,6 +86,9 @@ public record TechnologyObservation(
         spfSignals = spfSignals == null ? List.of() : List.copyOf(spfSignals);
         providerSignals = providerSignals == null ? List.of() : List.copyOf(providerSignals);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
+        publicInfrastructure = publicInfrastructure == null
+                ? PublicInfrastructureObservation.empty()
+                : publicInfrastructure;
     }
 
     public static TechnologyObservation empty() {
@@ -68,7 +103,25 @@ public record TechnologyObservation(
                 null,
                 List.of(),
                 List.of(),
-                List.of()
+                List.of(),
+                PublicInfrastructureObservation.empty()
+        );
+    }
+
+    public TechnologyObservation withPublicInfrastructure(PublicInfrastructureObservation observation) {
+        return new TechnologyObservation(
+                emailPlatform,
+                emailPlatformConfidence,
+                emailGateway,
+                emailGatewayConfidence,
+                dmarcPosture,
+                spfPosture,
+                spfAllMechanism,
+                spfRedirectTarget,
+                spfSignals,
+                providerSignals,
+                evidence,
+                observation
         );
     }
 
@@ -97,7 +150,9 @@ public record TechnologyObservation(
     }
 
     public String evidenceDisplay() {
-        return String.join(" | ", evidence);
+        List<String> combined = new ArrayList<>(evidence);
+        combined.addAll(publicInfrastructure.evidence());
+        return String.join(" | ", combined);
     }
 
     public String providerSignalsDisplay() {

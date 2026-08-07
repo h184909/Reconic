@@ -20,6 +20,7 @@ import no.reconic.generator.model.Municipality;
 import no.reconic.generator.intelligence.DmarcPosture;
 import no.reconic.generator.intelligence.EmailGateway;
 import no.reconic.generator.intelligence.EmailPlatform;
+import no.reconic.generator.intelligence.PublicInfrastructureService;
 import no.reconic.generator.intelligence.TechnologyAnalysisService;
 import no.reconic.generator.intelligence.TechnologyObservation;
 import no.reconic.generator.scoring.OpportunityScoringService;
@@ -50,6 +51,7 @@ public class CompanyDiscoveryService {
     private final DomainOverrideService domainOverrideService;
     private final DnsEnrichmentService dnsEnrichmentService;
     private final TechnologyAnalysisService technologyAnalysisService;
+    private final PublicInfrastructureService publicInfrastructureService;
     private final OpportunityScoringService opportunityScoringService;
 
     public CompanyDiscoveryService(
@@ -58,6 +60,7 @@ public class CompanyDiscoveryService {
             DomainOverrideService domainOverrideService,
             DnsEnrichmentService dnsEnrichmentService,
             TechnologyAnalysisService technologyAnalysisService,
+            PublicInfrastructureService publicInfrastructureService,
             OpportunityScoringService opportunityScoringService
     ) {
         this.brregClient = brregClient;
@@ -65,6 +68,7 @@ public class CompanyDiscoveryService {
         this.domainOverrideService = domainOverrideService;
         this.dnsEnrichmentService = dnsEnrichmentService;
         this.technologyAnalysisService = technologyAnalysisService;
+        this.publicInfrastructureService = publicInfrastructureService;
         this.opportunityScoringService = opportunityScoringService;
     }
 
@@ -110,7 +114,13 @@ public class CompanyDiscoveryService {
         List<CompanyCandidate> correctedDomainCandidates = domainOverrideService.apply(sortedCandidates);
         List<CompanyCandidate> dnsCandidates = dnsEnrichmentService.enrich(correctedDomainCandidates);
         List<CompanyCandidate> technologyCandidates = technologyAnalysisService.enrich(dnsCandidates);
-        List<CompanyCandidate> candidates = opportunityScoringService.enrich(technologyCandidates).stream()
+
+        // v0.5.2: passive/public enrichment only. No active port or vulnerability scanning.
+        List<CompanyCandidate> publicIntelligenceCandidates =
+                publicInfrastructureService.enrich(technologyCandidates);
+
+        // The new public signals are intentionally NOT score drivers yet.
+        List<CompanyCandidate> candidates = opportunityScoringService.enrich(publicIntelligenceCandidates).stream()
                 .sorted(Comparator
                         .comparingInt((CompanyCandidate candidate) ->
                                 candidate.opportunityAssessment().priority().ordinal())
@@ -157,11 +167,11 @@ public class CompanyDiscoveryService {
                 observation.emailPlatform() == EmailPlatform.GOOGLE_WORKSPACE);
         int gatewayCount = countTechnology(candidates, observation ->
                 observation.emailGateway() != EmailGateway.NONE);
-        int dmarcEnforcedCount = countTechnology(candidates, observation ->
+        int dmarcEnforcedCount = countTechnologyWithAnalyzedDomain(candidates, observation ->
                 observation.dmarcPosture().isEnforced());
-        int dmarcMonitoringCount = countTechnology(candidates, observation ->
+        int dmarcMonitoringCount = countTechnologyWithAnalyzedDomain(candidates, observation ->
                 observation.dmarcPosture() == DmarcPosture.MONITORING);
-        int dmarcMissingCount = countTechnology(candidates, observation ->
+        int dmarcMissingCount = countTechnologyWithAnalyzedDomain(candidates, observation ->
                 observation.dmarcPosture() == DmarcPosture.MISSING);
         int providerSignalCount = countTechnology(candidates, TechnologyObservation::hasProviderSignals);
 
@@ -242,12 +252,24 @@ public class CompanyDiscoveryService {
                 .count();
     }
 
-
     private int countTechnology(
             List<CompanyCandidate> candidates,
             java.util.function.Predicate<TechnologyObservation> predicate
     ) {
         return (int) candidates.stream()
+                .map(CompanyCandidate::technologyObservation)
+                .filter(Objects::nonNull)
+                .filter(predicate)
+                .count();
+    }
+
+    private int countTechnologyWithAnalyzedDomain(
+            List<CompanyCandidate> candidates,
+            java.util.function.Predicate<TechnologyObservation> predicate
+    ) {
+        return (int) candidates.stream()
+                .filter(candidate -> candidate.domainCandidate() != null
+                        && candidate.domainCandidate().hasDomain())
                 .map(CompanyCandidate::technologyObservation)
                 .filter(Objects::nonNull)
                 .filter(predicate)
