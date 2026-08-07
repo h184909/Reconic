@@ -345,3 +345,60 @@
         flex: 1 1 auto;
     }
 }
+
+
+/* Reconic 0.7 – financial intelligence */
+
+.explorer-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.finance-cell strong {
+    display: block;
+}
+
+.finance-badge {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 0.45rem;
+    padding: 0.25rem 0.48rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.finance-badge.positive {
+    border: 1px solid #8caf9f;
+    background: #e5f4ed;
+    color: #164d39;
+}
+
+.finance-badge.negative {
+    border: 1px solid #e0a2a2;
+    background: #fff0f0;
+    color: #8b2525;
+}
+
+.explorer-table {
+    min-width: 1180px;
+}
+
+.explorer-table th:nth-child(1) { width: 16%; }
+.explorer-table th:nth-child(2) { width: 17%; }
+.explorer-table th:nth-child(3) { width: 17%; }
+.explorer-table th:nth-child(4) { width: 15%; }
+.explorer-table th:nth-child(5) { width: 16%; }
+.explorer-table th:nth-child(6) { width: 11%; }
+.explorer-table th:nth-child(7) { width: 8%; }
+
+@media (max-width: 900px) {
+    .explorer-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .explorer-metric-grid {
+        grid-template-columns: 1fr;
+    }
+}

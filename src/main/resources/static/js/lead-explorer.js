@@ -26,15 +26,22 @@
         dnssec: document.getElementById("filterDnssec"),
         domainConfidence: document.getElementById("filterDomainConfidence"),
         priority: document.getElementById("filterPriority"),
+        revenueMin: document.getElementById("filterRevenueMin"),
+        operatingMarginMin: document.getElementById("filterOperatingMarginMin"),
+        profitability: document.getElementById("filterProfitability"),
+        financialStatus: document.getElementById("filterFinancialStatus"),
         sort: document.getElementById("filterSort"),
         requireDomain: document.getElementById("filterRequireDomain"),
         requireMx: document.getElementById("filterRequireMx"),
         onlyMsp: document.getElementById("filterOnlyMsp"),
+        requireFinancials: document.getElementById("filterRequireFinancials"),
         pageSize: document.getElementById("filterPageSize"),
         visibleCount: document.getElementById("explorerVisibleCount"),
         totalCount: document.getElementById("explorerTotalCount"),
         averageScore: document.getElementById("explorerAverageScore"),
         highPriorityCount: document.getElementById("explorerHighPriorityCount"),
+        financialDataCount: document.getElementById("explorerFinancialDataCount"),
+        profitableCount: document.getElementById("explorerProfitableCount"),
         mspCount: document.getElementById("explorerMspCount"),
         weakMailCount: document.getElementById("explorerWeakMailCount"),
         statusText: document.getElementById("explorerStatusText"),
@@ -47,6 +54,7 @@
         nextPage: document.getElementById("explorerNextPage"),
         clear: document.getElementById("clearExplorerFilters"),
         coldCallPreset: document.getElementById("presetColdCall"),
+        ringReadyPreset: document.getElementById("presetRingReady"),
         exportFiltered: document.getElementById("exportFilteredCsv")
     };
 
@@ -58,6 +66,11 @@
     const intValue = value => {
         const number = Number.parseInt(textValue(value), 10);
         return Number.isFinite(number) ? number : 0;
+    };
+
+    const floatValue = value => {
+        const number = Number.parseFloat(textValue(value));
+        return Number.isFinite(number) ? number : null;
     };
 
     function providerTokens(row) {
@@ -111,6 +124,8 @@
             row.dataset.address,
             row.dataset.municipality,
             row.dataset.segmentLabel,
+            row.dataset.financialYear,
+            row.dataset.financialCurrency,
             ...providerTokens(row).map(token => token.provider)
         ].join(" "));
     }
@@ -143,6 +158,35 @@
         const spfValues = selectedCheckboxValues("spf");
         if (spfValues.length && !spfValues.includes(row.dataset.spf)) return false;
 
+        if (els.financialStatus?.value
+                && row.dataset.financialStatus !== els.financialStatus.value) return false;
+
+        if (els.requireFinancials?.checked && row.dataset.financialHasData !== "true") return false;
+
+        const revenueMin = floatValue(els.revenueMin?.value);
+        if (revenueMin !== null) {
+            const revenue = floatValue(row.dataset.revenue);
+            // A numeric revenue threshold is only comparable directly for NOK accounts.
+            if (row.dataset.financialCurrency !== "NOK"
+                    || revenue === null
+                    || revenue < revenueMin * 1_000_000) return false;
+        }
+
+        const marginMin = floatValue(els.operatingMarginMin?.value);
+        if (marginMin !== null) {
+            const margin = floatValue(row.dataset.operatingMargin);
+            if (margin === null || margin < marginMin) return false;
+        }
+
+        if (els.profitability?.value === "POSITIVE") {
+            const operatingResult = floatValue(row.dataset.operatingResult);
+            if (operatingResult === null || operatingResult <= 0) return false;
+        }
+        if (els.profitability?.value === "NEGATIVE") {
+            const operatingResult = floatValue(row.dataset.operatingResult);
+            if (operatingResult === null || operatingResult >= 0) return false;
+        }
+
         const tokens = providerTokens(row);
         if (els.provider?.value) {
             if (els.provider.value === "__NONE__") {
@@ -173,12 +217,33 @@
             return intValue(b.dataset.dataConfidence) - intValue(a.dataset.dataConfidence)
                 || intValue(b.dataset.score) - intValue(a.dataset.score);
         }
+        if (sort === "revenue-desc") {
+            return nullableNumberDesc(a.dataset.revenue, b.dataset.revenue)
+                || intValue(b.dataset.score) - intValue(a.dataset.score);
+        }
+        if (sort === "margin-desc") {
+            return nullableNumberDesc(a.dataset.operatingMargin, b.dataset.operatingMargin)
+                || intValue(b.dataset.score) - intValue(a.dataset.score);
+        }
+        if (sort === "annual-result-desc") {
+            return nullableNumberDesc(a.dataset.annualResult, b.dataset.annualResult)
+                || intValue(b.dataset.score) - intValue(a.dataset.score);
+        }
         if (sort === "company-asc") {
             return textValue(a.dataset.name).localeCompare(textValue(b.dataset.name), "nb-NO");
         }
         return intValue(b.dataset.score) - intValue(a.dataset.score)
             || intValue(b.dataset.dataConfidence) - intValue(a.dataset.dataConfidence)
             || intValue(b.dataset.employees) - intValue(a.dataset.employees);
+    }
+
+    function nullableNumberDesc(aValue, bValue) {
+        const a = floatValue(aValue);
+        const b = floatValue(bValue);
+        if (a === null && b === null) return 0;
+        if (a === null) return 1;
+        if (b === null) return -1;
+        return b - a;
     }
 
     function pageSize() {
@@ -206,11 +271,16 @@
         if (els.dnssec?.value) labels.push(`DNSSEC: ${selectedText(els.dnssec)}`);
         if (els.domainConfidence?.value) labels.push(`Domenetillit: ${selectedText(els.domainConfidence)}`);
         if (els.priority?.value) labels.push(`Prioritet: ${selectedText(els.priority)}`);
+        if (textValue(els.revenueMin?.value)) labels.push(`Omsetning ≥ ${els.revenueMin.value} mill. NOK`);
+        if (textValue(els.operatingMarginMin?.value)) labels.push(`Driftsmargin ≥ ${els.operatingMarginMin.value} %`);
+        if (els.profitability?.value) labels.push(`Lønnsomhet: ${selectedText(els.profitability)}`);
+        if (els.financialStatus?.value) labels.push(`Regnskap: ${selectedText(els.financialStatus)}`);
         labels.push(...selectedCheckboxLabels("dmarc").map(value => `DMARC: ${value}`));
         labels.push(...selectedCheckboxLabels("spf").map(value => `SPF: ${value}`));
         if (els.requireDomain?.checked) labels.push("Krever domene");
         if (els.requireMx?.checked) labels.push("Krever MX");
         if (els.onlyMsp?.checked) labels.push("Kun mulig MSP");
+        if (els.requireFinancials?.checked) labels.push("Krever regnskapsdata");
         return labels;
     }
 
@@ -281,6 +351,17 @@
         ).length;
         if (els.highPriorityCount) els.highPriorityCount.textContent = high.toString();
 
+        const financialData = filteredRows.filter(row =>
+            row.dataset.financialHasData === "true"
+        ).length;
+        if (els.financialDataCount) els.financialDataCount.textContent = financialData.toString();
+
+        const profitable = filteredRows.filter(row => {
+            const result = floatValue(row.dataset.operatingResult);
+            return result !== null && result > 0;
+        }).length;
+        if (els.profitableCount) els.profitableCount.textContent = profitable.toString();
+
         const msp = filteredRows.filter(row =>
             providerTokens(row).some(token => token.role === "MSP_CANDIDATE")
         ).length;
@@ -344,7 +425,8 @@
         [
             els.text, els.employeesMin, els.employeesMax, els.municipality,
             els.segment, els.platform, els.provider, els.providerRole,
-            els.dnssec, els.domainConfidence, els.priority
+            els.dnssec, els.domainConfidence, els.priority,
+            els.revenueMin, els.operatingMarginMin, els.profitability, els.financialStatus
         ].forEach(element => {
             if (element) element.value = "";
         });
@@ -353,7 +435,7 @@
             input.checked = false;
         });
 
-        [els.requireDomain, els.requireMx, els.onlyMsp].forEach(element => {
+        [els.requireDomain, els.requireMx, els.onlyMsp, els.requireFinancials].forEach(element => {
             if (element) element.checked = false;
         });
 
@@ -368,6 +450,22 @@
         if (els.requireDomain) els.requireDomain.checked = true;
         if (els.requireMx) els.requireMx.checked = true;
         if (els.domainConfidence) els.domainConfidence.value = "HIGH";
+
+        setChecked("dmarc", ["MISSING", "MONITORING"]);
+        setChecked("spf", ["MISSING", "SOFT_FAIL", "MULTIPLE"]);
+
+        currentPage = 1;
+        applyFilters();
+    }
+
+    function applyRingReadyPreset() {
+        clearFilters();
+
+        if (els.requireDomain) els.requireDomain.checked = true;
+        if (els.requireMx) els.requireMx.checked = true;
+        if (els.requireFinancials) els.requireFinancials.checked = true;
+        if (els.domainConfidence) els.domainConfidence.value = "HIGH";
+        if (els.profitability) els.profitability.value = "POSITIVE";
 
         setChecked("dmarc", ["MISSING", "MONITORING"]);
         setChecked("spf", ["MISSING", "SOFT_FAIL", "MULTIPLE"]);
@@ -405,6 +503,14 @@
             "spf",
             "dnssec",
             "providerSignals",
+            "financialStatus",
+            "financialYear",
+            "financialCurrency",
+            "operatingRevenue",
+            "operatingResult",
+            "operatingMarginPercent",
+            "annualResult",
+            "equityRatioPercent",
             "opportunityScore",
             "priority",
             "dataConfidence"
@@ -427,6 +533,14 @@
                 row.dataset.spf,
                 row.dataset.dnssec,
                 providers,
+                row.dataset.financialStatus,
+                row.dataset.financialYear,
+                row.dataset.financialCurrency,
+                row.dataset.revenue,
+                row.dataset.operatingResult,
+                row.dataset.operatingMargin,
+                row.dataset.annualResult,
+                row.dataset.equityRatio,
                 row.dataset.score,
                 row.dataset.priority,
                 row.dataset.dataConfidence
@@ -473,8 +587,9 @@
         const instantControls = [
             els.text, els.employeesMin, els.employeesMax, els.municipality,
             els.segment, els.platform, els.provider, els.providerRole,
-            els.dnssec, els.domainConfidence, els.priority, els.sort,
-            els.requireDomain, els.requireMx, els.onlyMsp
+            els.dnssec, els.domainConfidence, els.priority,
+            els.revenueMin, els.operatingMarginMin, els.profitability, els.financialStatus,
+            els.sort, els.requireDomain, els.requireMx, els.onlyMsp, els.requireFinancials
         ].filter(Boolean);
 
         instantControls.forEach(element => {
@@ -513,6 +628,7 @@
 
         els.clear?.addEventListener("click", clearFilters);
         els.coldCallPreset?.addEventListener("click", applyColdCallPreset);
+        els.ringReadyPreset?.addEventListener("click", applyRingReadyPreset);
         els.exportFiltered?.addEventListener("click", exportFilteredCsv);
     }
 

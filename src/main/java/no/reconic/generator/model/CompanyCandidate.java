@@ -2,6 +2,7 @@ package no.reconic.generator.model;
 
 import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
+import no.reconic.generator.finance.FinancialObservation;
 import no.reconic.generator.intelligence.TechnologyObservation;
 import no.reconic.generator.scoring.OpportunityAssessment;
 
@@ -23,8 +24,53 @@ public record CompanyCandidate(
         DomainCandidate domainCandidate,
         DnsObservation dnsObservation,
         TechnologyObservation technologyObservation,
-        OpportunityAssessment opportunityAssessment
+        OpportunityAssessment opportunityAssessment,
+        FinancialObservation financialObservation
 ) {
+    // Backwards-compatible constructor matching the pre-0.7 canonical signature.
+    public CompanyCandidate(
+            String organizationNumber,
+            String name,
+            int employees,
+            IndustrySegment segment,
+            String naceCode,
+            String naceDescription,
+            String municipalityNumber,
+            String municipalityName,
+            String address,
+            String website,
+            String email,
+            String phone,
+            EntityType entityType,
+            String parentOrganizationNumber,
+            DomainCandidate domainCandidate,
+            DnsObservation dnsObservation,
+            TechnologyObservation technologyObservation,
+            OpportunityAssessment opportunityAssessment
+    ) {
+        this(
+                organizationNumber,
+                name,
+                employees,
+                segment,
+                naceCode,
+                naceDescription,
+                municipalityNumber,
+                municipalityName,
+                address,
+                website,
+                email,
+                phone,
+                entityType,
+                parentOrganizationNumber,
+                domainCandidate,
+                dnsObservation,
+                technologyObservation,
+                opportunityAssessment,
+                FinancialObservation.empty()
+        );
+    }
+
     public CompanyCandidate(
             String organizationNumber,
             String name,
@@ -62,7 +108,8 @@ public record CompanyCandidate(
                 domainCandidate,
                 dnsObservation,
                 technologyObservation,
-                OpportunityAssessment.empty()
+                OpportunityAssessment.empty(),
+                FinancialObservation.empty()
         );
     }
 
@@ -102,7 +149,8 @@ public record CompanyCandidate(
                 domainCandidate,
                 dnsObservation,
                 TechnologyObservation.empty(),
-                OpportunityAssessment.empty()
+                OpportunityAssessment.empty(),
+                FinancialObservation.empty()
         );
     }
 
@@ -113,6 +161,9 @@ public record CompanyCandidate(
         opportunityAssessment = opportunityAssessment == null
                 ? OpportunityAssessment.empty()
                 : opportunityAssessment;
+        financialObservation = financialObservation == null
+                ? FinancialObservation.empty()
+                : financialObservation;
     }
 
     public String websiteUrl() {
@@ -156,7 +207,8 @@ public record CompanyCandidate(
                 candidate,
                 DnsObservation.skipped(candidate == null ? null : candidate.domain()),
                 TechnologyObservation.empty(),
-                OpportunityAssessment.empty()
+                OpportunityAssessment.empty(),
+                FinancialObservation.empty()
         );
     }
 
@@ -179,7 +231,8 @@ public record CompanyCandidate(
                 domainCandidate,
                 observation,
                 TechnologyObservation.empty(),
-                OpportunityAssessment.empty()
+                OpportunityAssessment.empty(),
+                FinancialObservation.empty()
         );
     }
 
@@ -202,7 +255,8 @@ public record CompanyCandidate(
                 domainCandidate,
                 dnsObservation,
                 observation,
-                OpportunityAssessment.empty()
+                OpportunityAssessment.empty(),
+                FinancialObservation.empty()
         );
     }
 
@@ -225,7 +279,32 @@ public record CompanyCandidate(
                 domainCandidate,
                 dnsObservation,
                 technologyObservation,
-                assessment
+                assessment,
+                financialObservation
+        );
+    }
+
+    public CompanyCandidate withFinancialObservation(FinancialObservation observation) {
+        return new CompanyCandidate(
+                organizationNumber,
+                name,
+                employees,
+                segment,
+                naceCode,
+                naceDescription,
+                municipalityNumber,
+                municipalityName,
+                address,
+                website,
+                email,
+                phone,
+                entityType,
+                parentOrganizationNumber,
+                domainCandidate,
+                dnsObservation,
+                technologyObservation,
+                opportunityAssessment,
+                observation
         );
     }
 }

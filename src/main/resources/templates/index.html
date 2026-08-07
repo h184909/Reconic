@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic – Lead Explorer</title>
+    <title>Reconic – Lead Explorer 0.7</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
     <link rel="stylesheet" th:href="@{/css/lead-explorer.css}">
     <script th:src="@{/js/lead-explorer.js}" defer></script>
@@ -12,17 +12,17 @@
 <header class="topbar">
     <div class="shell topbar-inner">
         <a class="brand" th:href="@{/}">Reconic</a>
-        <span class="phase">Lead Explorer 0.6</span>
+        <span class="phase">Lead Explorer 0.7</span>
     </div>
 </header>
 
 <main class="shell page">
     <section class="hero">
-        <p class="eyebrow">Lead intelligence 0.6</p>
+        <p class="eyebrow">Lead intelligence 0.7</p>
         <h1>Finn ringelisten – ikke bare en score</h1>
         <p class="intro">
             Hent markedet én gang, og filtrer deretter lokalt på størrelse, bransje, e-postoppsett,
-            leverandørsignaler og datakvalitet uten å kjøre DNS-analysen på nytt.
+            leverandørsignaler, regnskap og datakvalitet uten å kjøre analysen på nytt.
         </p>
     </section>
 
@@ -32,7 +32,7 @@
                 <p class="section-kicker">Marked</p>
                 <h2>Nytt kandidatsøk</h2>
             </div>
-            <p class="muted">Datakilder: Enhetsregisteret og passive/offentlige infrastruktursignaler</p>
+            <p class="muted">Datakilder: Enhetsregisteret, Regnskapsregisteret og passive/offentlige infrastruktursignaler</p>
         </div>
 
         <form th:action="@{/search}" th:object="${searchForm}" method="post" class="search-form">
@@ -123,7 +123,7 @@
             <span class="timestamp" th:text="${result.generatedAtDisplay()}">07.08.2026</span>
         </div>
 
-        <div class="metric-grid opportunity-metric-grid">
+        <div class="metric-grid opportunity-metric-grid explorer-metric-grid">
             <article class="metric-card opportunity-card">
                 <span>Gjennomsnittlig opportunity</span>
                 <strong id="explorerAverageScore" th:text="${result.averageOpportunityScoreDisplay()}">0</strong>
@@ -133,6 +133,16 @@
                 <span>Høy prioritet</span>
                 <strong id="explorerHighPriorityCount" th:text="${result.actionableOpportunityCount()}">0</strong>
                 <small>Svært høy eller høy blant synlige leads</small>
+            </article>
+            <article class="metric-card confidence-card">
+                <span>Regnskap funnet</span>
+                <strong id="explorerFinancialDataCount">0</strong>
+                <small>Åpne nøkkeltall fra siste årsregnskap</small>
+            </article>
+            <article class="metric-card confidence-card">
+                <span>Positiv drift</span>
+                <strong id="explorerProfitableCount">0</strong>
+                <small>Positivt driftsresultat blant synlige leads</small>
             </article>
             <article class="metric-card confidence-card">
                 <span>Med kjent MSP-signal</span>
@@ -155,6 +165,9 @@
                 <div class="explorer-toolbar-actions">
                     <button type="button" class="secondary-button explorer-button" id="presetColdCall">
                         Forslag: e-postpolicy
+                    </button>
+                    <button type="button" class="primary-button explorer-button" id="presetRingReady">
+                        Forslag: ringeklar
                     </button>
                     <button type="button" class="secondary-button explorer-button" id="clearExplorerFilters">
                         Nullstill
@@ -247,6 +260,36 @@
                 </label>
 
                 <label class="explorer-field">
+                    <span>Min. omsetning (mill.)</span>
+                    <input id="filterRevenueMin" type="number" min="0" step="1" placeholder="Alle">
+                </label>
+
+                <label class="explorer-field">
+                    <span>Min. driftsmargin (%)</span>
+                    <input id="filterOperatingMarginMin" type="number" step="0.5" placeholder="Alle">
+                </label>
+
+                <label class="explorer-field">
+                    <span>Lønnsomhet</span>
+                    <select id="filterProfitability">
+                        <option value="">Alle</option>
+                        <option value="POSITIVE">Positivt driftsresultat</option>
+                        <option value="NEGATIVE">Negativt driftsresultat</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>Regnskapsdata</span>
+                    <select id="filterFinancialStatus">
+                        <option value="">Alle</option>
+                        <option value="SUCCESS">Regnskap funnet</option>
+                        <option value="NOT_AVAILABLE">Ingen nøkkeltall</option>
+                        <option value="FAILED">Oppslag feilet</option>
+                        <option value="SKIPPED">Ikke hentet</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
                     <span>Prioritet</span>
                     <select id="filterPriority">
                         <option value="">Alle</option>
@@ -263,6 +306,9 @@
                         <option value="opportunity-desc">Opportunity, høyest først</option>
                         <option value="employees-desc">Ansatte, flest først</option>
                         <option value="confidence-desc">Datatillit, høyest først</option>
+                        <option value="revenue-desc">Omsetning, høyest først</option>
+                        <option value="margin-desc">Driftsmargin, høyest først</option>
+                        <option value="annual-result-desc">Årsresultat, høyest først</option>
                         <option value="company-asc">Bedrift A–Å</option>
                     </select>
                 </label>
@@ -291,6 +337,7 @@
                     <label><input id="filterRequireDomain" type="checkbox"> Krev funnet domene</label>
                     <label><input id="filterRequireMx" type="checkbox"> Krev aktiv MX</label>
                     <label><input id="filterOnlyMsp" type="checkbox"> Kun mulig MSP-signal</label>
+                    <label><input id="filterRequireFinancials" type="checkbox"> Krev regnskapsdata</label>
                 </fieldset>
             </div>
 
@@ -333,6 +380,7 @@
                     <th>Kontakt / domene</th>
                     <th>E-postoppsett</th>
                     <th>Leverandørsignal</th>
+                    <th>Økonomi</th>
                     <th>Opportunity</th>
                     <th>Analyse</th>
                 </tr>
@@ -357,6 +405,15 @@
                              data-priority=${candidate.opportunityAssessment.priority.name()},
                              data-score=${candidate.opportunityAssessment.opportunityScore},
                              data-data-confidence=${candidate.opportunityAssessment.dataConfidenceScore},
+                             data-financial-status=${candidate.financialObservation.status.name()},
+                             data-financial-has-data=${candidate.financialObservation.hasData()},
+                             data-financial-currency=${candidate.financialObservation.currency ?: ''},
+                             data-financial-year=${candidate.financialObservation.fiscalYear ?: ''},
+                             data-revenue=${candidate.financialObservation.operatingRevenue ?: ''},
+                             data-operating-result=${candidate.financialObservation.operatingResult ?: ''},
+                             data-operating-margin=${candidate.financialObservation.operatingMarginPercent() ?: ''},
+                             data-annual-result=${candidate.financialObservation.annualResult ?: ''},
+                             data-equity-ratio=${candidate.financialObservation.equityRatioPercent() ?: ''},
                              data-email=${candidate.email ?: ''},
                              data-phone=${candidate.phone ?: ''},
                              data-address=${candidate.address ?: ''}">
@@ -452,6 +509,47 @@
                         </div>
                     </td>
 
+                    <td class="finance-cell">
+                        <div th:if="${candidate.financialObservation.hasData()}">
+                            <strong th:text="${'Omsetning ' + candidate.financialObservation.operatingRevenueDisplay()}">
+                                Omsetning 50 mill. NOK
+                            </strong>
+                            <small class="table-subtext"
+                                   th:text="${'Drift ' + candidate.financialObservation.operatingResultDisplay()
+                                   + ' · margin ' + candidate.financialObservation.operatingMarginDisplay()}">
+                                Drift 5 mill. · margin 10 %
+                            </small>
+                            <small class="table-subtext"
+                                   th:text="${'Årsresultat ' + candidate.financialObservation.annualResultDisplay()}">
+                                Årsresultat
+                            </small>
+                            <span class="finance-badge positive"
+                                  th:if="${candidate.financialObservation.hasPositiveOperatingResult()}">
+                                Positiv drift
+                            </span>
+                            <span class="finance-badge negative"
+                                  th:if="${candidate.financialObservation.hasNegativeOperatingResult()}">
+                                Negativ drift
+                            </span>
+                            <small class="table-subtext"
+                                   th:text="${(candidate.financialObservation.fiscalYear ?: 'Ukjent år')
+                                   + ' · ' + candidate.financialObservation.sourceDisplay()}">
+                                2025 · Regnskapsregisteret
+                            </small>
+                        </div>
+                        <div th:unless="${candidate.financialObservation.hasData()}">
+                            <span class="muted"
+                                  th:text="${candidate.financialObservation.status.displayName}">
+                                Ingen nøkkeltall
+                            </span>
+                            <small class="table-subtext"
+                                   th:if="${candidate.financialObservation.warning != null}"
+                                   th:text="${candidate.financialObservation.warning}">
+                                Forklaring
+                            </small>
+                        </div>
+                    </td>
+
                     <td class="score-cell">
                         <div class="score-ring"
                              th:classappend="${candidate.opportunityAssessment.priority.cssClass}">
@@ -480,6 +578,51 @@
                                     <span th:text="${candidate.address ?: 'Adresse ikke tilgjengelig'}">Adresse</span>
                                     <span th:text="${candidate.email ?: 'E-post ikke tilgjengelig'}">E-post</span>
                                     <span th:text="${candidate.phone ?: 'Telefon ikke tilgjengelig'}">Telefon</span>
+                                </div>
+
+                                <div>
+                                    <strong>Økonomi</strong>
+                                    <span th:text="${'Status: ' + candidate.financialObservation.status.displayName}">
+                                        Status
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.hasData()}"
+                                          th:text="${'Omsetning: ' + candidate.financialObservation.operatingRevenueDisplay()}">
+                                        Omsetning
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.hasData()}"
+                                          th:text="${'Driftsresultat: ' + candidate.financialObservation.operatingResultDisplay()
+                                          + ' (' + candidate.financialObservation.operatingMarginDisplay() + ')'}">
+                                        Driftsresultat
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.hasData()}"
+                                          th:text="${'Resultat før skatt: ' + candidate.financialObservation.preTaxResultDisplay()}">
+                                        Resultat før skatt
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.hasData()}"
+                                          th:text="${'Årsresultat: ' + candidate.financialObservation.annualResultDisplay()}">
+                                        Årsresultat
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.hasData()}"
+                                          th:text="${'Egenkapital: ' + candidate.financialObservation.equityDisplay()
+                                          + ' · EK-andel ' + candidate.financialObservation.equityRatioDisplay()}">
+                                        Egenkapital
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.hasData()}"
+                                          th:text="${'Gjeld: ' + candidate.financialObservation.debtDisplay()}">
+                                        Gjeld
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.hasData()}"
+                                          th:text="${'Omsetning per ansatt: '
+                                          + candidate.financialObservation.revenuePerEmployeeDisplay(candidate.employees)}">
+                                        Omsetning per ansatt
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.sourceIsParent}">
+                                        Regnskapet tilhører juridisk hovedenhet, ikke underenheten alene.
+                                    </span>
+                                    <span th:if="${candidate.financialObservation.warning != null}"
+                                          th:text="${candidate.financialObservation.warning}">
+                                        Regnskapsmerknad
+                                    </span>
                                 </div>
 
                                 <div class="score-breakdown">

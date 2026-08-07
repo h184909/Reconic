@@ -13,6 +13,8 @@ import no.reconic.generator.domain.DomainDiscoveryService;
 import no.reconic.generator.domain.DomainOverrideService;
 import no.reconic.generator.domain.DomainSource;
 import no.reconic.generator.model.CompanyCandidate;
+import no.reconic.generator.finance.FinancialEnrichmentService;
+import no.reconic.generator.finance.FinancialLookupStatus;
 import no.reconic.generator.model.CompanyDiscoveryResult;
 import no.reconic.generator.model.EntityType;
 import no.reconic.generator.model.IndustrySegment;
@@ -53,6 +55,7 @@ public class CompanyDiscoveryService {
     private final TechnologyAnalysisService technologyAnalysisService;
     private final PublicInfrastructureService publicInfrastructureService;
     private final OpportunityScoringService opportunityScoringService;
+    private final FinancialEnrichmentService financialEnrichmentService;
 
     public CompanyDiscoveryService(
             BrregClient brregClient,
@@ -61,7 +64,8 @@ public class CompanyDiscoveryService {
             DnsEnrichmentService dnsEnrichmentService,
             TechnologyAnalysisService technologyAnalysisService,
             PublicInfrastructureService publicInfrastructureService,
-            OpportunityScoringService opportunityScoringService
+            OpportunityScoringService opportunityScoringService,
+            FinancialEnrichmentService financialEnrichmentService
     ) {
         this.brregClient = brregClient;
         this.domainDiscoveryService = domainDiscoveryService;
@@ -70,6 +74,7 @@ public class CompanyDiscoveryService {
         this.technologyAnalysisService = technologyAnalysisService;
         this.publicInfrastructureService = publicInfrastructureService;
         this.opportunityScoringService = opportunityScoringService;
+        this.financialEnrichmentService = financialEnrichmentService;
     }
 
     public CompanyDiscoveryResult discover(LeadSearchForm form) {
@@ -119,8 +124,16 @@ public class CompanyDiscoveryService {
         List<CompanyCandidate> publicIntelligenceCandidates =
                 publicInfrastructureService.enrich(technologyCandidates);
 
-        // The new public signals are intentionally NOT score drivers yet.
-        List<CompanyCandidate> candidates = opportunityScoringService.enrich(publicIntelligenceCandidates).stream()
+        // Public-infrastructure signals are still not score drivers.
+        List<CompanyCandidate> scoredCandidates =
+                opportunityScoringService.enrich(publicIntelligenceCandidates);
+
+        // v0.7: official annual-account key figures are enrichment/filter data only.
+        // Financials intentionally do NOT modify the opportunity score yet.
+        List<CompanyCandidate> financiallyEnrichedCandidates =
+                financialEnrichmentService.enrich(scoredCandidates);
+
+        List<CompanyCandidate> candidates = financiallyEnrichedCandidates.stream()
                 .sorted(Comparator
                         .comparingInt((CompanyCandidate candidate) ->
                                 candidate.opportunityAssessment().priority().ordinal())
@@ -174,13 +187,17 @@ public class CompanyDiscoveryService {
         int dmarcMissingCount = countTechnologyWithAnalyzedDomain(candidates, observation ->
                 observation.dmarcPosture() == DmarcPosture.MISSING);
         int providerSignalCount = countTechnology(candidates, TechnologyObservation::hasProviderSignals);
+        int financialDataCount = (int) candidates.stream()
+                .filter(candidate -> candidate.financialObservation().status() == FinancialLookupStatus.SUCCESS)
+                .count();
 
         int fetchedCount = fetchedCompanies.size();
         log.info(
-                "Kandidatsøk ferdig: {} rå treff, {} kandidater, {} domener, DNS: {} ok / {} delvis / {} feilet",
+                "Kandidatsøk ferdig: {} rå treff, {} kandidater, {} domener, {} med regnskap, DNS: {} ok / {} delvis / {} feilet",
                 fetchedCount,
                 candidates.size(),
                 domainCount,
+                financialDataCount,
                 dnsSuccessCount,
                 dnsPartialCount,
                 dnsFailureCount

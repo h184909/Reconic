@@ -2,6 +2,7 @@ package no.reconic.generator.export;
 
 import no.reconic.generator.dns.DnsObservation;
 import no.reconic.generator.domain.DomainCandidate;
+import no.reconic.generator.finance.FinancialObservation;
 import no.reconic.generator.intelligence.ProviderSignal;
 import no.reconic.generator.intelligence.PublicInfrastructureObservation;
 import no.reconic.generator.intelligence.TechnologyObservation;
@@ -89,6 +90,26 @@ public class CsvExportService {
                 "certificateNames",
                 "publicLookupWarnings",
                 "publicInfrastructureEvidence",
+                "financialStatus",
+                "financialSourceOrganizationNumber",
+                "financialSourceIsParent",
+                "financialYear",
+                "financialPeriodEnd",
+                "financialCurrency",
+                "operatingRevenue",
+                "operatingResult",
+                "operatingMarginPercent",
+                "preTaxResult",
+                "annualResult",
+                "equity",
+                "assets",
+                "equityRatioPercent",
+                "debt",
+                "currentAssets",
+                "currentLiabilities",
+                "currentRatio",
+                "revenuePerEmployee",
+                "financialWarning",
                 "opportunityScore",
                 "opportunityPriority",
                 "marketFitScore",
@@ -125,6 +146,7 @@ public class CsvExportService {
                     ? PublicInfrastructureObservation.empty()
                     : technology.publicInfrastructure();
             OpportunityAssessment opportunity = candidate.opportunityAssessment();
+            FinancialObservation financial = candidate.financialObservation();
 
             appendRow(csv, List.of(
                     value(candidate.organizationNumber()),
@@ -176,6 +198,26 @@ public class CsvExportService {
                     publicInfra.certificateNamesDisplay(),
                     publicInfra.warningsDisplay(),
                     publicInfra.evidenceDisplay(),
+                    financial == null ? "" : financial.status().getDisplayName(),
+                    financial == null ? "" : value(financial.sourceOrganizationNumber()),
+                    financial != null && financial.sourceIsParent() ? "true" : "false",
+                    financial == null || financial.fiscalYear() == null ? "" : financial.fiscalYear().toString(),
+                    financial == null ? "" : value(financial.periodEnd()),
+                    financial == null ? "" : value(financial.currency()),
+                    financial == null ? "" : decimal(financial.operatingRevenue()),
+                    financial == null ? "" : decimal(financial.operatingResult()),
+                    financial == null ? "" : decimal(financial.operatingMarginPercent()),
+                    financial == null ? "" : decimal(financial.preTaxResult()),
+                    financial == null ? "" : decimal(financial.annualResult()),
+                    financial == null ? "" : decimal(financial.equity()),
+                    financial == null ? "" : decimal(financial.assets()),
+                    financial == null ? "" : decimal(financial.equityRatioPercent()),
+                    financial == null ? "" : decimal(financial.debt()),
+                    financial == null ? "" : decimal(financial.currentAssets()),
+                    financial == null ? "" : decimal(financial.currentLiabilities()),
+                    financial == null ? "" : decimal(financial.currentRatio()),
+                    financial == null ? "" : decimal(financial.revenuePerEmployee(candidate.employees())),
+                    financial == null ? "" : value(financial.warning()),
                     opportunity == null ? "" : Integer.toString(opportunity.opportunityScore()),
                     opportunity == null ? "" : opportunity.priority().getDisplayName(),
                     opportunity == null ? "" : Integer.toString(opportunity.marketFitScore()),
@@ -254,6 +296,10 @@ public class CsvExportService {
             return safe;
         }
         return "\"" + safe.replace("\"", "\"\"") + "\"";
+    }
+
+    private String decimal(java.math.BigDecimal value) {
+        return value == null ? "" : value.stripTrailingZeros().toPlainString();
     }
 
     private String value(String value) {
