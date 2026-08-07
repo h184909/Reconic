@@ -1,0 +1,267 @@
+/* Reconic 0.6 – Lead Explorer. Loaded after main.css. */
+
+.lead-explorer-panel {
+    margin: 1.25rem 0;
+    padding: 1.25rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.explorer-toolbar,
+.explorer-status-row,
+.competitor-overview {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.explorer-toolbar h3 {
+    margin: 0.2rem 0 0;
+}
+
+.explorer-toolbar-actions,
+.explorer-export-actions,
+.inline-badges,
+.policy-badges,
+.provider-summary-chips,
+.active-filter-chips {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.explorer-button {
+    cursor: pointer;
+    font: inherit;
+}
+
+.explorer-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(145px, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
+.explorer-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.explorer-field > span,
+.explorer-inline-select > span,
+.explorer-caption {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.explorer-field input,
+.explorer-field select,
+.explorer-inline-select select {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.7);
+    color: inherit;
+    padding: 0.6rem 0.7rem;
+}
+
+.explorer-search-field {
+    grid-column: span 2;
+}
+
+.explorer-policy-groups {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
+.explorer-check-group {
+    margin: 0;
+    padding: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+}
+
+.explorer-check-group legend {
+    padding: 0 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.explorer-check-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0.2rem 0.8rem 0.2rem 0;
+    font-size: 0.86rem;
+}
+
+.explorer-status-row,
+.competitor-overview {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.explorer-inline-select {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.explorer-inline-select select {
+    width: auto;
+    min-height: 36px;
+    padding: 0.35rem 0.55rem;
+}
+
+.filter-chip,
+.provider-summary-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(30, 41, 59, 0.7);
+    padding: 0.32rem 0.6rem;
+    font-size: 0.76rem;
+}
+
+.provider-summary-chip {
+    cursor: pointer;
+    color: inherit;
+}
+
+.provider-summary-chip strong {
+    margin-left: 0.35rem;
+}
+
+.explorer-table-wrap {
+    max-height: 72vh;
+    overflow: auto;
+    border-radius: 14px;
+}
+
+.explorer-table {
+    width: 100%;
+    min-width: 1040px;
+    table-layout: fixed;
+}
+
+.explorer-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    backdrop-filter: blur(10px);
+}
+
+.explorer-table th:nth-child(1) { width: 18%; }
+.explorer-table th:nth-child(2) { width: 19%; }
+.explorer-table th:nth-child(3) { width: 20%; }
+.explorer-table th:nth-child(4) { width: 17%; }
+.explorer-table th:nth-child(5) { width: 14%; }
+.explorer-table th:nth-child(6) { width: 12%; }
+
+.explorer-table td {
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.contact-cell,
+.mail-stack-cell,
+.provider-cell,
+.analysis-cell {
+    display: table-cell;
+}
+
+.contact-link {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+}
+
+.policy-badges {
+    margin: 0.45rem 0;
+}
+
+.infrastructure-badge {
+    opacity: 0.9;
+}
+
+.explorer-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 1rem 0 0;
+}
+
+.explorer-pagination button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.explorer-empty-filtered {
+    margin: 1rem 0;
+    padding: 1.25rem;
+    text-align: center;
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    border-radius: 14px;
+}
+
+.lead-row[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 1100px) {
+    .explorer-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .explorer-search-field {
+        grid-column: span 2;
+    }
+
+    .explorer-policy-groups {
+        grid-template-columns: 1fr;
+    }
+
+    .explorer-toolbar,
+    .explorer-status-row,
+    .competitor-overview {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 680px) {
+    .lead-explorer-panel {
+        padding: 0.9rem;
+    }
+
+    .explorer-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .explorer-search-field {
+        grid-column: auto;
+    }
+
+    .explorer-toolbar-actions,
+    .explorer-export-actions {
+        width: 100%;
+    }
+
+    .explorer-toolbar-actions > *,
+    .explorer-export-actions > * {
+        flex: 1 1 auto;
+    }
+}

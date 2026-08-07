@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconic – forklarbar opportunity-score</title>
+    <title>Reconic – Lead Explorer</title>
     <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/lead-explorer.css}">
+    <script th:src="@{/js/lead-explorer.js}" defer></script>
 </head>
 <body>
 <header class="topbar">
     <div class="shell topbar-inner">
         <a class="brand" th:href="@{/}">Reconic</a>
-        <span class="phase">Generator validation</span>
+        <span class="phase">Lead Explorer 0.6</span>
     </div>
 </header>
 
 <main class="shell page">
     <section class="hero">
-        <p class="eyebrow">Opportunity intelligence 0.5</p>
-        <h1>Prioriter leads uten å skjule begrunnelsen</h1>
+        <p class="eyebrow">Lead intelligence 0.6</p>
+        <h1>Finn ringelisten – ikke bare en score</h1>
         <p class="intro">
-            Reconic rangerer kandidater etter markedsmatch, observerbare tekniske muligheter og leverandørbildet.
-            Opportunity-score og datatillit vises separat, slik at en interessant kandidat ikke forveksles med et sikkert datagrunnlag.
+            Hent markedet én gang, og filtrer deretter lokalt på størrelse, bransje, e-postoppsett,
+            leverandørsignaler og datakvalitet uten å kjøre DNS-analysen på nytt.
         </p>
     </section>
 
@@ -30,7 +32,7 @@
                 <p class="section-kicker">Marked</p>
                 <h2>Nytt kandidatsøk</h2>
             </div>
-            <p class="muted">Datakilder: Enhetsregisteret og offentlig DNS</p>
+            <p class="muted">Datakilder: Enhetsregisteret og passive/offentlige infrastruktursignaler</p>
         </div>
 
         <form th:action="@{/search}" th:object="${searchForm}" method="post" class="search-form">
@@ -96,119 +98,269 @@
             </label>
 
             <div class="submit-row">
-                <button type="submit" class="primary-button">Hent, analyser og ranger</button>
-                <small class="muted">Søket kjører domene-, DNS-, signal- og opportunity-analyse.</small>
+                <button type="submit" class="primary-button">Hent og analyser markedet</button>
+                <small class="muted">Etter søket jobber Lead Explorer direkte på resultatet i nettleseren.</small>
             </div>
         </form>
 
         <div class="alert error" th:if="${searchError}" th:text="${searchError}"></div>
     </section>
 
-    <section class="results" th:if="${result}">
+    <section class="results" th:if="${result}" id="leadExplorer">
         <div class="results-header">
             <div>
-                <p class="section-kicker">Resultat</p>
-                <h2 th:text="${result.candidateCount + ' kandidater'}">0 kandidater</h2>
+                <p class="section-kicker">Lead Explorer</p>
+                <h2>
+                    <span id="explorerVisibleCount" th:text="${result.candidateCount}">0</span>
+                    <span>av</span>
+                    <span id="explorerTotalCount" th:text="${result.candidateCount}">0</span>
+                    <span>kandidater</span>
+                </h2>
                 <p class="muted">
-                    Listen er sortert etter opportunity-score, deretter datatillit og antall ansatte.
+                    Filtrene under endrer listen umiddelbart. Ingen nye Brønnøysund- eller DNS-oppslag kjøres.
                 </p>
             </div>
-            <span class="timestamp" th:text="${result.generatedAtDisplay()}">01.08.2026</span>
+            <span class="timestamp" th:text="${result.generatedAtDisplay()}">07.08.2026</span>
         </div>
 
         <div class="metric-grid opportunity-metric-grid">
             <article class="metric-card opportunity-card">
                 <span>Gjennomsnittlig opportunity</span>
-                <strong th:text="${result.averageOpportunityScoreDisplay()}">0</strong>
-                <small>Salgsrelevans, ikke sikkerhetskarakter</small>
+                <strong id="explorerAverageScore" th:text="${result.averageOpportunityScoreDisplay()}">0</strong>
+                <small>Oppdateres etter filtrering</small>
             </article>
             <article class="metric-card opportunity-card">
                 <span>Høy prioritet</span>
-                <strong th:text="${result.actionableOpportunityCount()}">0</strong>
-                <small>Svært høy eller høy opportunity</small>
+                <strong id="explorerHighPriorityCount" th:text="${result.actionableOpportunityCount()}">0</strong>
+                <small>Svært høy eller høy blant synlige leads</small>
             </article>
             <article class="metric-card confidence-card">
-                <span>Gjennomsnittlig datatillit</span>
-                <strong th:text="${result.averageDataConfidenceDisplay()}">0</strong>
-                <small>Separat fra opportunity-scoren</small>
+                <span>Med kjent MSP-signal</span>
+                <strong id="explorerMspCount">0</strong>
+                <small>Mulig IT-/driftsleverandør, ikke bekreftet kundeforhold</small>
             </article>
             <article class="metric-card confidence-card">
-                <span>Lav datatillit</span>
-                <strong th:text="${result.lowDataConfidenceCount()}">0</strong>
-                <small>Under 60 av 100</small>
+                <span>Svakt e-postpolicy-signal</span>
+                <strong id="explorerWeakMailCount">0</strong>
+                <small>DMARC mangler/p=none og SPF mangler/softfail/flere</small>
             </article>
         </div>
 
-        <div class="metric-grid intelligence-metric-grid compact-metrics">
-            <article class="metric-card compact">
-                <span>Microsoft 365</span>
-                <strong th:text="${result.microsoft365Count}">0</strong>
-                <small>Et stack-signal, ikke poengdriver alene</small>
-            </article>
-            <article class="metric-card compact">
-                <span>DMARC mangler / overvåking</span>
-                <strong th:text="${result.dmarcMissingCount + result.dmarcMonitoringCount}">0</strong>
-                <small>Observerbare områder å undersøke</small>
-            </article>
-            <article class="metric-card compact">
-                <span>Leverandørsignal</span>
-                <strong th:text="${result.providerSignalCount}">0</strong>
-                <small>Rolle og bevis beholdes separat</small>
-            </article>
-            <article class="metric-card compact">
-                <span>Domener funnet</span>
-                <strong th:text="${result.domainCount}">0</strong>
-                <small th:text="${result.domainCoverageDisplay() + ' dekning'}">0 % dekning</small>
-            </article>
-        </div>
-
-        <div class="export-panel">
-            <div>
-                <strong>Eksporter resultatet</strong>
-                <small>CSV inneholder scorekomponenter, datatillit, leverandørroller, bevis og nye valideringskolonner.</small>
-            </div>
-            <div class="export-actions">
-                <a class="secondary-button" th:href="@{/export/all.csv}">Eksporter alle</a>
-                <a class="primary-button link-button" th:href="@{/export/validation.csv}">Tilfeldig valideringsutvalg (50)</a>
-            </div>
-        </div>
-
-        <div class="summary-row">
-            <div class="segment-summary">
-                <div class="summary-chip" th:each="entry : ${result.segmentCounts.entrySet()}">
-                    <span th:text="${entry.key.displayName}">Industri</span>
-                    <strong th:text="${entry.value}">0</strong>
+        <section class="lead-explorer-panel" aria-labelledby="explorerFiltersHeading">
+            <div class="explorer-toolbar">
+                <div>
+                    <p class="section-kicker">Filtrer resultatet</p>
+                    <h3 id="explorerFiltersHeading">Bygg din egen ringeliste</h3>
+                </div>
+                <div class="explorer-toolbar-actions">
+                    <button type="button" class="secondary-button explorer-button" id="presetColdCall">
+                        Forslag: e-postpolicy
+                    </button>
+                    <button type="button" class="secondary-button explorer-button" id="clearExplorerFilters">
+                        Nullstill
+                    </button>
                 </div>
             </div>
-            <div class="confidence-summary">
-                <span class="priority-badge very-high">
-                    Svært høy <strong th:text="${result.veryHighOpportunityCount()}">0</strong>
-                </span>
-                <span class="priority-badge high">
-                    Høy <strong th:text="${result.highOpportunityCount()}">0</strong>
-                </span>
-                <span class="priority-badge medium">
-                    Middels <strong th:text="${result.mediumOpportunityCount()}">0</strong>
-                </span>
-            </div>
-        </div>
 
-        <div class="table-wrap" th:if="${!result.candidates.isEmpty()}">
-            <table class="opportunity-table">
+            <div class="explorer-filter-grid">
+                <label class="explorer-field explorer-search-field">
+                    <span>Søk</span>
+                    <input id="filterText" type="search"
+                           placeholder="Bedrift, org.nr., domene, e-post, telefon …"
+                           autocomplete="off">
+                </label>
+
+                <label class="explorer-field">
+                    <span>Ansatte fra</span>
+                    <input id="filterEmployeesMin" type="number" min="0" placeholder="Alle">
+                </label>
+
+                <label class="explorer-field">
+                    <span>Ansatte til</span>
+                    <input id="filterEmployeesMax" type="number" min="0" placeholder="Alle">
+                </label>
+
+                <label class="explorer-field">
+                    <span>Kommune</span>
+                    <select id="filterMunicipality">
+                        <option value="">Alle kommuner</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>Bransje</span>
+                    <select id="filterSegment">
+                        <option value="">Alle bransjer</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>E-postplattform</span>
+                    <select id="filterPlatform">
+                        <option value="">Alle plattformer</option>
+                        <option value="MICROSOFT_365">Microsoft 365</option>
+                        <option value="GOOGLE_WORKSPACE">Google Workspace</option>
+                        <option value="OTHER">Annen plattform</option>
+                        <option value="NONE">Ingen MX</option>
+                        <option value="UNKNOWN">Ukjent</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>Leverandør</span>
+                    <select id="filterProvider">
+                        <option value="">Alle leverandørsignaler</option>
+                        <option value="__NONE__">Ingen kjent signatur</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>Leverandørrolle</span>
+                    <select id="filterProviderRole">
+                        <option value="">Alle roller</option>
+                        <option value="MSP_CANDIDATE">Mulig IT-/driftsleverandør</option>
+                        <option value="DNS_PROVIDER">DNS-/domeneleverandør</option>
+                        <option value="CONNECTIVITY_PROVIDER">Nett-/konnektivitetsleverandør</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>DNSSEC</span>
+                    <select id="filterDnssec">
+                        <option value="">Alle</option>
+                        <option value="PRESENT">Aktivert</option>
+                        <option value="MISSING">Ikke funnet</option>
+                        <option value="UNKNOWN">Ukjent</option>
+                        <option value="SKIPPED">Ikke kjørt</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>Domenetillit</span>
+                    <select id="filterDomainConfidence">
+                        <option value="">Alle</option>
+                        <option value="HIGH">Høy</option>
+                        <option value="MEDIUM">Middels</option>
+                        <option value="LOW">Lav</option>
+                        <option value="NONE">Ingen</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>Prioritet</span>
+                    <select id="filterPriority">
+                        <option value="">Alle</option>
+                        <option value="VERY_HIGH">Svært høy</option>
+                        <option value="HIGH">Høy</option>
+                        <option value="MEDIUM">Middels</option>
+                        <option value="LOW">Lav</option>
+                    </select>
+                </label>
+
+                <label class="explorer-field">
+                    <span>Sorter</span>
+                    <select id="filterSort">
+                        <option value="opportunity-desc">Opportunity, høyest først</option>
+                        <option value="employees-desc">Ansatte, flest først</option>
+                        <option value="confidence-desc">Datatillit, høyest først</option>
+                        <option value="company-asc">Bedrift A–Å</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="explorer-policy-groups">
+                <fieldset class="explorer-check-group">
+                    <legend>DMARC</legend>
+                    <label><input type="checkbox" data-filter-group="dmarc" value="MISSING"> Mangler</label>
+                    <label><input type="checkbox" data-filter-group="dmarc" value="MONITORING"> p=none</label>
+                    <label><input type="checkbox" data-filter-group="dmarc" value="QUARANTINE"> Quarantine</label>
+                    <label><input type="checkbox" data-filter-group="dmarc" value="REJECT"> Reject</label>
+                </fieldset>
+
+                <fieldset class="explorer-check-group">
+                    <legend>SPF</legend>
+                    <label><input type="checkbox" data-filter-group="spf" value="MISSING"> Mangler</label>
+                    <label><input type="checkbox" data-filter-group="spf" value="SOFT_FAIL"> Softfail</label>
+                    <label><input type="checkbox" data-filter-group="spf" value="MULTIPLE"> Flere poster</label>
+                    <label><input type="checkbox" data-filter-group="spf" value="HARD_FAIL"> Hardfail</label>
+                    <label><input type="checkbox" data-filter-group="spf" value="REDIRECTED"> Redirect</label>
+                </fieldset>
+
+                <fieldset class="explorer-check-group explorer-toggles">
+                    <legend>Datakvalitet</legend>
+                    <label><input id="filterRequireDomain" type="checkbox"> Krev funnet domene</label>
+                    <label><input id="filterRequireMx" type="checkbox"> Krev aktiv MX</label>
+                    <label><input id="filterOnlyMsp" type="checkbox"> Kun mulig MSP-signal</label>
+                </fieldset>
+            </div>
+
+            <div class="explorer-status-row">
+                <div>
+                    <strong id="explorerStatusText">Viser alle kandidater</strong>
+                    <div id="activeFilterChips" class="active-filter-chips" aria-live="polite"></div>
+                </div>
+                <div class="explorer-export-actions">
+                    <label class="explorer-inline-select">
+                        <span>Vis per side</span>
+                        <select id="filterPageSize">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="all">Alle</option>
+                        </select>
+                    </label>
+                    <button type="button" class="secondary-button explorer-button" id="exportFilteredCsv">
+                        Eksporter filtrert liste
+                    </button>
+                    <a class="secondary-button" th:href="@{/export/all.csv}">Full CSV</a>
+                </div>
+            </div>
+
+            <div class="competitor-overview">
+                <div>
+                    <span class="explorer-caption">Leverandørbildet i synlig utvalg</span>
+                    <small>Klikk et signal for å filtrere på leverandøren.</small>
+                </div>
+                <div id="providerSummaryChips" class="provider-summary-chips"></div>
+            </div>
+        </section>
+
+        <div class="table-wrap explorer-table-wrap" th:if="${!result.candidates.isEmpty()}">
+            <table class="opportunity-table explorer-table" id="leadExplorerTable">
                 <thead>
                 <tr>
                     <th>Bedrift</th>
-                    <th>Opportunity</th>
-                    <th>Domene / e-post</th>
-                    <th>DMARC / SPF</th>
+                    <th>Kontakt / domene</th>
+                    <th>E-postoppsett</th>
                     <th>Leverandørsignal</th>
-                    <th>Derfor undersøker du</th>
-                    <th>Detaljer</th>
+                    <th>Opportunity</th>
+                    <th>Analyse</th>
                 </tr>
                 </thead>
-                <tbody>
-                <tr th:each="candidate : ${result.candidates}">
-                    <td>
+                <tbody id="leadExplorerBody">
+                <tr class="lead-row"
+                    th:each="candidate : ${result.candidates}"
+                    th:attr="data-name=${candidate.name},
+                             data-orgnr=${candidate.organizationNumber},
+                             data-employees=${candidate.employees},
+                             data-segment=${candidate.segment.name()},
+                             data-segment-label=${candidate.segment.displayName},
+                             data-municipality=${candidate.municipalityName ?: ''},
+                             data-domain=${candidate.domainCandidate.domain ?: ''},
+                             data-has-domain=${candidate.domainCandidate.hasDomain()},
+                             data-domain-confidence=${candidate.domainCandidate.confidence.name()},
+                             data-has-mx=${candidate.dnsObservation.hasMx()},
+                             data-platform=${candidate.technologyObservation.emailPlatform.name()},
+                             data-dmarc=${candidate.technologyObservation.dmarcPosture.name()},
+                             data-spf=${candidate.technologyObservation.spfPosture.name()},
+                             data-dnssec=${candidate.technologyObservation.publicInfrastructure.dnssecStatus.name()},
+                             data-priority=${candidate.opportunityAssessment.priority.name()},
+                             data-score=${candidate.opportunityAssessment.opportunityScore},
+                             data-data-confidence=${candidate.opportunityAssessment.dataConfidenceScore},
+                             data-email=${candidate.email ?: ''},
+                             data-phone=${candidate.phone ?: ''},
+                             data-address=${candidate.address ?: ''}">
+                    <td class="company-cell">
                         <strong th:text="${candidate.name}">Firma AS</strong>
                         <small class="table-subtext" th:text="${candidate.organizationNumber}">999999999</small>
                         <small class="table-subtext"
@@ -217,6 +369,89 @@
                             50 ansatte · Industri · Sandnes
                         </small>
                     </td>
+
+                    <td class="contact-cell">
+                        <a th:if="${candidate.domainCandidate.hasDomain()}"
+                           th:href="${candidate.domainCandidate.url()}"
+                           th:text="${candidate.domainCandidate.domain}"
+                           target="_blank"
+                           rel="noopener noreferrer">example.no</a>
+                        <span class="muted" th:unless="${candidate.domainCandidate.hasDomain()}">Domene ikke funnet</span>
+
+                        <div class="inline-badges">
+                            <span class="confidence-badge"
+                                  th:classappend="${candidate.domainCandidate.confidence.cssClass}"
+                                  th:text="${candidate.domainCandidate.confidence.displayName}">Høy</span>
+                            <span class="override-badge"
+                                  th:if="${candidate.domainCandidate.source.name() == 'MANUAL_OVERRIDE'}">Manuell fasit</span>
+                            <span class="shared-domain-badge"
+                                  th:if="${candidate.opportunityAssessment.sharedDomain}"
+                                  th:text="${'Delt av ' + candidate.opportunityAssessment.sharedDomainCount}">
+                                Delt domene
+                            </span>
+                        </div>
+
+                        <a class="contact-link"
+                           th:if="${candidate.email != null && !candidate.email.isBlank()}"
+                           th:href="${'mailto:' + candidate.email}"
+                           th:text="${candidate.email}">post@example.no</a>
+                        <a class="contact-link"
+                           th:if="${candidate.phone != null && !candidate.phone.isBlank()}"
+                           th:href="${'tel:' + candidate.phone}"
+                           th:text="${candidate.phone}">51 00 00 00</a>
+                    </td>
+
+                    <td class="mail-stack-cell">
+                        <strong th:text="${candidate.technologyObservation.emailPlatform.displayName}">Microsoft 365</strong>
+                        <div class="policy-badges">
+                            <span class="signal-badge"
+                                  th:classappend="${candidate.technologyObservation.dmarcPosture.cssClass}"
+                                  th:text="${'DMARC: ' + candidate.technologyObservation.dmarcPosture.displayName}">
+                                DMARC
+                            </span>
+                            <span class="signal-badge"
+                                  th:classappend="${candidate.technologyObservation.spfPosture.cssClass}"
+                                  th:text="${'SPF: ' + candidate.technologyObservation.spfPosture.displayName}">
+                                SPF
+                            </span>
+                            <span class="signal-badge infrastructure-badge"
+                                  th:text="${'DNSSEC: ' + candidate.technologyObservation.publicInfrastructure.dnssecStatus.displayName}">
+                                DNSSEC
+                            </span>
+                        </div>
+                        <small class="table-subtext gateway-note"
+                               th:if="${candidate.technologyObservation.hasGateway()}"
+                               th:text="${'Gateway: ' + candidate.technologyObservation.emailGateway.displayName}">
+                            Gateway: Proofpoint
+                        </small>
+                        <small class="table-subtext"
+                               th:if="${candidate.technologyObservation.publicInfrastructure.hasMtaSts()}">MTA-STS funnet</small>
+                        <small class="table-subtext"
+                               th:if="${candidate.technologyObservation.publicInfrastructure.hasTlsRpt()}">TLS-RPT funnet</small>
+                    </td>
+
+                    <td class="provider-cell" th:with="provider=${candidate.technologyObservation.primaryProviderSignal()}">
+                        <div th:if="${provider != null}">
+                            <strong th:text="${provider.provider}">Hjelseth</strong>
+                            <small class="provider-role"
+                                   th:classappend="${provider.role.cssClass}"
+                                   th:text="${provider.role.displayName}">
+                                Mulig IT-/driftsleverandør
+                            </small>
+                            <small class="table-subtext" th:text="${'Bevis: ' + provider.sourcesDisplay()}">
+                                Bevis: NS + SPF
+                            </small>
+                        </div>
+                        <span class="muted" th:if="${provider == null}">Ingen kjent signatur</span>
+
+                        <div class="explorer-provider-tokens" hidden>
+                            <span class="provider-filter-token"
+                                  th:each="providerSignal : ${candidate.technologyObservation.providerSignals}"
+                                  th:attr="data-provider=${providerSignal.provider},
+                                           data-provider-role=${providerSignal.role.name()}"></span>
+                        </div>
+                    </td>
+
                     <td class="score-cell">
                         <div class="score-ring"
                              th:classappend="${candidate.opportunityAssessment.priority.cssClass}">
@@ -227,93 +462,47 @@
                               th:classappend="${candidate.opportunityAssessment.priority.cssClass}"
                               th:text="${candidate.opportunityAssessment.priority.displayName}">Høy</span>
                         <span class="calibration-badge"
-                              th:if="${candidate.opportunityAssessment.priorityCapped}">Krever domenebekreftelse</span>
+                              th:if="${candidate.opportunityAssessment.priorityCapped}">
+                            Krever domenebekreftelse
+                        </span>
                         <small class="data-confidence"
                                th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">
                             Datatillit 82/100
                         </small>
                     </td>
-                    <td>
-                        <a th:if="${candidate.domainCandidate.hasDomain()}"
-                           th:href="${candidate.domainCandidate.url()}"
-                           th:text="${candidate.domainCandidate.domain}"
-                           target="_blank"
-                           rel="noopener noreferrer">example.no</a>
-                        <span class="muted" th:unless="${candidate.domainCandidate.hasDomain()}">Ikke funnet</span>
-                        <span class="confidence-badge"
-                              th:classappend="${candidate.domainCandidate.confidence.cssClass}"
-                              th:text="${candidate.domainCandidate.confidence.displayName}">Høy</span>
-                        <span class="override-badge"
-                              th:if="${candidate.domainCandidate.source.name() == 'MANUAL_OVERRIDE'}">Manuell fasit</span>
-                        <span class="shared-domain-badge"
-                              th:if="${candidate.opportunityAssessment.sharedDomain}"
-                              th:text="${'Delt av ' + candidate.opportunityAssessment.sharedDomainCount + ' kandidater'}">
-                            Delt domene
-                        </span>
-                        <small class="table-subtext"
-                               th:text="${candidate.technologyObservation.emailPlatform.displayName}">Microsoft 365</small>
-                        <small class="table-subtext gateway-note"
-                               th:if="${candidate.technologyObservation.hasGateway()}"
-                               th:text="${'Gateway: ' + candidate.technologyObservation.emailGateway.displayName}">
-                            Gateway: Proofpoint
-                        </small>
-                    </td>
-                    <td>
-                        <span class="signal-badge"
-                              th:classappend="${candidate.technologyObservation.dmarcPosture.cssClass}"
-                              th:text="${candidate.technologyObservation.dmarcPosture.displayName}">Reject</span>
-                        <span class="signal-badge second-signal"
-                              th:classappend="${candidate.technologyObservation.spfPosture.cssClass}"
-                              th:text="${candidate.technologyObservation.spfPosture.displayName}">Hardfail (-all)</span>
-                        <small class="table-subtext"
-                               th:if="${candidate.technologyObservation.spfRedirectTarget != null}"
-                               th:text="${'Redirect: ' + candidate.technologyObservation.spfRedirectTarget}">Redirect</small>
-                    </td>
-                    <td th:with="provider=${candidate.technologyObservation.primaryProviderSignal()}">
-                        <div th:if="${provider != null}">
-                            <strong th:text="${provider.provider}">Hjelseth</strong>
-                            <small class="provider-role"
-                                   th:classappend="${provider.role.cssClass}"
-                                   th:text="${provider.role.displayName}">Mulig IT-/driftsleverandør</small>
-                            <small class="table-subtext" th:text="${'Bevis: ' + provider.sourcesDisplay()}">Bevis: NS + SPF</small>
-                        </div>
-                        <span class="muted" th:if="${provider == null}">Ingen kjent signatur</span>
-                    </td>
-                    <td>
-                        <ul class="reason-list compact-reasons">
-                            <li th:each="reason, stat : ${candidate.opportunityAssessment.reasonsToContact}"
-                                th:if="${stat.index < 2}"
-                                th:text="${reason}">Begrunnelse</li>
-                        </ul>
-                        <small class="warning-count"
-                               th:if="${candidate.opportunityAssessment.hasWarnings()}"
-                               th:text="${candidate.opportunityAssessment.uncertaintyWarnings.size()
-                               + ' usikkerhetspunkt'}">1 usikkerhetspunkt</small>
-                    </td>
-                    <td>
+
+                    <td class="analysis-cell">
                         <details class="raw-details">
-                            <summary>Åpne analyse</summary>
+                            <summary>Åpne</summary>
                             <div class="detail-grid score-detail-grid">
+                                <div>
+                                    <strong>Kontakt</strong>
+                                    <span th:text="${candidate.address ?: 'Adresse ikke tilgjengelig'}">Adresse</span>
+                                    <span th:text="${candidate.email ?: 'E-post ikke tilgjengelig'}">E-post</span>
+                                    <span th:text="${candidate.phone ?: 'Telefon ikke tilgjengelig'}">Telefon</span>
+                                </div>
+
                                 <div class="score-breakdown">
                                     <strong>Scorefordeling</strong>
                                     <span th:text="${candidate.opportunityAssessment.scoreBreakdownDisplay()}">Fordeling</span>
-                                    <span th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">Datatillit</span>
+                                    <span th:text="${'Datatillit ' + candidate.opportunityAssessment.dataConfidenceScore + '/100'}">
+                                        Datatillit
+                                    </span>
                                     <span class="calibration-note"
                                           th:if="${candidate.opportunityAssessment.priorityCapped}"
-                                          th:text="${candidate.opportunityAssessment.priorityExplanation}">Prioriteten er kalibrert.</span>
-                                    <span class="calibration-note"
-                                          th:if="${candidate.opportunityAssessment.sharedDomain}"
-                                          th:text="${'Domenet deles av ' + candidate.opportunityAssessment.sharedDomainCount + ' kandidater i dette søket.'}">
-                                        Delt domene
+                                          th:text="${candidate.opportunityAssessment.priorityExplanation}">
+                                        Prioriteten er kalibrert.
                                     </span>
                                 </div>
+
                                 <div>
-                                    <strong>Alle grunner</strong>
+                                    <strong>Hvorfor undersøke</strong>
                                     <ul class="reason-list">
                                         <li th:each="reason : ${candidate.opportunityAssessment.reasonsToContact}"
                                             th:text="${reason}">Grunn</li>
                                     </ul>
                                 </div>
+
                                 <div th:if="${candidate.opportunityAssessment.hasWarnings()}">
                                     <strong>Usikkerhet</strong>
                                     <ul class="warning-list">
@@ -321,38 +510,80 @@
                                             th:text="${warning}">Advarsel</li>
                                     </ul>
                                 </div>
+
                                 <div>
                                     <strong>Domenegrunnlag</strong>
                                     <span th:text="${candidate.domainCandidate.explanation}">Forklaring</span>
+                                    <span th:if="${candidate.opportunityAssessment.sharedDomain}"
+                                          th:text="${'Domenet deles av ' + candidate.opportunityAssessment.sharedDomainCount
+                                          + ' kandidater i dette søket.'}">
+                                        Delt domene
+                                    </span>
                                 </div>
+
                                 <div>
                                     <strong>MX</strong>
                                     <span th:text="${candidate.dnsObservation.mxDisplay()}">MX</span>
                                 </div>
+
                                 <div>
                                     <strong>SPF</strong>
                                     <span th:text="${candidate.dnsObservation.spfDisplay()}">SPF</span>
+                                    <span th:if="${candidate.technologyObservation.spfRedirectTarget != null}"
+                                          th:text="${'Redirect: ' + candidate.technologyObservation.spfRedirectTarget}">
+                                        Redirect
+                                    </span>
                                 </div>
+
                                 <div>
                                     <strong>DMARC</strong>
                                     <span th:text="${candidate.dnsObservation.dmarcRecord ?: 'Ikke funnet'}">DMARC</span>
                                 </div>
+
                                 <div>
                                     <strong>Navneservere</strong>
                                     <span th:text="${candidate.dnsObservation.nameServersDisplay()}">NS</span>
                                 </div>
-                                <div th:if="${candidate.technologyObservation.hasProviderSignals()}">
-                                    <strong>Leverandørsignaler</strong>
-                                    <span class="provider-detail" th:each="provider : ${candidate.technologyObservation.providerSignals}">
-                                        <b th:text="${provider.provider + ' – ' + provider.role.displayName + ': '}">Leverandør:</b>
-                                        <span th:text="${provider.evidenceDisplay()}">NS: ns1...</span>
+
+                                <div>
+                                    <strong>Passiv infrastruktur</strong>
+                                    <span th:text="${'DNSSEC: ' + candidate.technologyObservation.publicInfrastructure.dnssecStatus.displayName}">
+                                        DNSSEC
+                                    </span>
+                                    <span th:text="${'MTA-STS: ' + candidate.technologyObservation.publicInfrastructure.mtaStsStatus.displayName}">
+                                        MTA-STS
+                                    </span>
+                                    <span th:text="${'TLS-RPT: ' + candidate.technologyObservation.publicInfrastructure.tlsRptStatus.displayName}">
+                                        TLS-RPT
+                                    </span>
+                                    <span th:if="${candidate.technologyObservation.publicInfrastructure.hasAutodiscover()}"
+                                          th:text="${'Autodiscover: ' + candidate.technologyObservation.publicInfrastructure.autodiscoverTarget}">
+                                        Autodiscover
                                     </span>
                                 </div>
+
+                                <div th:if="${candidate.technologyObservation.hasProviderSignals()}">
+                                    <strong>Alle leverandørsignaler</strong>
+                                    <span class="provider-detail"
+                                          th:each="providerSignal : ${candidate.technologyObservation.providerSignals}">
+                                        <b th:text="${providerSignal.provider + ' – ' + providerSignal.role.displayName + ': '}">
+                                            Leverandør:
+                                        </b>
+                                        <span th:text="${providerSignal.evidenceDisplay()}">NS: ns1...</span>
+                                    </span>
+                                </div>
+
                                 <div>
                                     <strong>DNS-status</strong>
                                     <span th:text="${candidate.dnsObservation.status.displayName}">Fullført</span>
-                                    <span class="error-text" th:if="${candidate.dnsObservation.hasErrors()}"
+                                    <span class="error-text"
+                                          th:if="${candidate.dnsObservation.hasErrors()}"
                                           th:text="${candidate.dnsObservation.errorsDisplay()}">Feil</span>
+                                    <span class="error-text"
+                                          th:if="${!candidate.technologyObservation.publicInfrastructure.lookupWarnings.isEmpty()}"
+                                          th:text="${candidate.technologyObservation.publicInfrastructure.warningsDisplay()}">
+                                        Offentlig oppslagsfeil
+                                    </span>
                                 </div>
                             </div>
                         </details>
@@ -362,8 +593,18 @@
             </table>
         </div>
 
+        <div class="explorer-empty-filtered" id="explorerEmptyFiltered" hidden>
+            Ingen kandidater matcher filtrene. Fjern ett eller flere filtre og prøv igjen.
+        </div>
+
+        <nav class="explorer-pagination" id="explorerPagination" aria-label="Sider i filtrert leadliste">
+            <button type="button" class="secondary-button explorer-button" id="explorerPrevPage">Forrige</button>
+            <span id="explorerPageStatus">Side 1 av 1</span>
+            <button type="button" class="secondary-button explorer-button" id="explorerNextPage">Neste</button>
+        </nav>
+
         <div class="empty-state" th:if="${result.candidates.isEmpty()}">
-            Ingen bedrifter passet filtrene. Prøv et bredere ansattintervall eller flere segmenter.
+            Ingen bedrifter passet markedssøket. Prøv et bredere ansattintervall eller flere segmenter.
         </div>
     </section>
 </main>
